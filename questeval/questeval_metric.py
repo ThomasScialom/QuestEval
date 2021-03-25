@@ -105,17 +105,16 @@ class QuestEval:
     def generic_load_model(self, path_model, is_task_QG=False):
         # Download the model
         if not os.path.exists(os.path.join(DIR, path_model)):
-            os.makedirs(os.path.join(DIR, path_model), exist_ok=True)
+            # os.makedirs(os.path.join(DIR, path_model), exist_ok=True)
             logging.info("Downloading models...")
             zip_model_path = os.path.join(DIR, path_model + '.zip')
             zip_model_url = f"{ZIPPED_MODELS_URL}/{path_model.replace('models/', '')}.zip"
             urllib.request.urlretrieve(zip_model_url, zip_model_path)
             with zipfile.ZipFile(zip_model_path, 'r') as zip_ref:
-                zip_ref.extractall(os.path.join(DIR, path_model))
+                zip_ref.extractall(os.path.join(DIR, 'models/'))
 
             logging.info("Removing archive...")
             os.remove(zip_model_path)
-            shutil.rmtree(os.path.join(DIR, "models/models"))
 
         # Load the model
         path_model = os.path.join(DIR, path_model)
