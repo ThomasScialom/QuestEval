@@ -9,9 +9,9 @@ It is the result from an (on-going) international collaboration, and so far it t
 - [Multilingual Evaluation](#multilingual-evaluation)
 
 Planned extensions: 
-- machine translation
-- image captioning 
-- multilingual summarization
+- Machine Translation
+- Image Captioning 
+- Multilingual NLG
 
 ## Installing QuestEval
 ```
@@ -28,8 +28,7 @@ $ conda activate questeval
 (questeval) $ pip install -e .
 ```
 
-todo
-Now, download the trained [models](https://drive.google.com/file/d/1CnFImB39vIYAxYtqNecPk3s1jjv1o3zr/view?usp=sharing) and unzip the file *models* file in the current root folder *safeval*.
+The trained [models](https://safeval.s3.eu-west-3.amazonaws.com/) will be downloaded on the fly on the folder *models* in the current root folder *safeval*.
 Those QA/QG/Policy models are the one used to compute all the scores reported in the paper. Alternatively, you can use your own models.
 
 ## Using QuestEval 
@@ -95,31 +94,31 @@ For using a virtual jupyter environment:
 ### Summarization:
 The project is a collaboration work between [LIP6](https://mlia.lip6.fr/) Lab and [ReciTAL Research](https://recital.ai/en/research-development/).
 
-Questeval also handle specificities of summarization with a Weighter to select only the questions asking about important facts that are worth to be summarized: read more in the original paper [TODO]. To activate this Weighter: *do_weighter=True*.
+Questeval also handle specificities of summarization with a Weighter to select only the questions asking about important facts that are worth to be summarized: read more in the original [paper](https://arxiv.org/abs/2103.12693). To activate this Weighter: *do_weighter=True*.
 
-Paper link: [todo]
+Paper link: https://arxiv.org/abs/2103.12693
 
 How to cite:
 ```
 @article{scialom2020SAFEval,
   title={SAFEval: Summarization Asks for Fact-based Evaluation},
-  author={Scialom, Thomas R and Dray, Paul-Alexis and Lamprier Sylvain and Piwowarski Benjamin and Staiano Jacopo},
-  journal={arXiv preprint arXiv:2007.12626 [todo]},
+  author={Scialom, Thomas and Dray, Paul-Alexis and Gallinari Patrick and Lamprier Sylvain and Piwowarski Benjamin and Staiano Jacopo and Wang Alex},
+  journal={arXiv preprint arXiv:2103.12693},
   year={2021}
 }
 ```
 
 ### Text Simplification:
 
-The metric is effective with its default parameters. It ranks better the systems than BLEU or SARI metrics as reported in [TODO].
+The metric is effective with its default parameters. It ranks better the systems than BLEU or SARI metrics as reported in (comming very soon).
 
 
 ### Data2text:
 
-We propose by default trained QA/QG models dealing with table inputs ((e.g. E2E or Webnlg, see more [todo]). To load QuestEval for data2text tasks, specify *task=e2e* or *task=webnlg*. Note that you need a specific processing to linearised the tables. By default we handle the [GEM](https://gem-benchmark.com/) format for these two datasets. If you need an other preprocessing of the table, you can pass your custom function to Questeval: *src_preproc_pipe=custom_formating*.
+We propose by default trained QA/QG models dealing with table inputs (e.g. E2E or Webnlg, see more in comming very soon). To load QuestEval for data2text tasks, specify *task=e2e* or *task=webnlg*. Note that you need a specific processing to linearised the tables. By default we handle the [GEM](https://gem-benchmark.com/) format for these two datasets. If you need an other preprocessing of the table, you can pass your custom function to Questeval: *src_preproc_pipe=custom_formating*.
 
 ### Multilingual Evaluation:
 
-QuestEval support non english evaluation: the parameter **language* can be set to *multi* to tackle multilingual data. For Question Generation and Answering we used the m-Minilm model [TODO]. For the answer selection, spacy does not support multilingual *noun chuncking* which might lead to poorer correlation with human jugement than in English Questeval: we are working on that!
+QuestEval support non english evaluation: the parameter **language* can be set to *multi* to tackle multilingual data. For Question Generation and Answering we used the [m-Minilm model](https://github.com/microsoft/unilm/tree/master/minilm). For the answer selection, spacy does not support multilingual *noun chuncking* which might lead to poorer correlation with human jugement than in English Questeval: we are working on that!
 
 

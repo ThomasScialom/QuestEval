@@ -15,8 +15,6 @@ from questeval.utils import (
 )
 from questeval.uni_utils import T2tUniModel
 
-AVAILABLE_LANGUAGES = ["en", "multi"]
-AVAILABLE_TASKS = ["text2text", "summarization", "text_simplification", "E2E", "webnlg"]
 ZIPPED_MODELS_URL = "https://safeval.s3.eu-west-3.amazonaws.com"
 
 
@@ -39,11 +37,15 @@ class QuestEval:
         clf_batch_size=None,
         isCuda=False
     ):
-        if task not in AVAILABLE_TASKS:
+
+        self.AVAILABLE_LANGUAGES = ["en", "multi"]
+        self.AVAILABLE_TASKS = ["text2text", "summarization", "text_simplification", "E2E", "webnlg"]
+
+        if task not in self.AVAILABLE_TASKS:
             print(f"Task {task} is not known.")
             exit()
 
-        if language not in AVAILABLE_LANGUAGES:
+        if language not in self.AVAILABLE_LANGUAGES:
             print(f"Language {language} is not known.")
             exit()
 
@@ -212,8 +214,9 @@ class QuestEval:
 
         return np.mean(scores).item()
 
-    def compute_all(self, hypothesis: str, source: str, reference: str = None) -> dict:
+    def compute_all(self, hypothesis: str, source: str = None, reference: str = None) -> dict:
 
+        assert source != None or reference != None, "you need to provide at least the source or the reference"
         assert source != '', "the source should not be an empty string"
         assert reference != '', "the reference should not be an empty string"
         if hypothesis == '':
