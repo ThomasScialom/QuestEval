@@ -92,7 +92,7 @@ For using a virtual jupyter environment:
 ## Tasks specificities:
 
 ### Summarization:
-The project is a collaboration work between [LIP6](https://mlia.lip6.fr/) Lab and [ReciTAL Research](https://recital.ai/en/research-development/).
+The project is a collaboration work between [LIP6 Lab](https://mlia.lip6.fr/), [New York University](https://wp.nyu.edu/ml2/) and [ReciTAL Research](https://recital.ai/en/research-development/).
 
 Questeval also handle specificities of summarization with a Weighter to select only the questions asking about important facts that are worth to be summarized: read more in the original [paper](https://arxiv.org/abs/2103.12693). To activate this Weighter: *do_weighter=True*.
 
