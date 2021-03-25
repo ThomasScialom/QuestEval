@@ -64,7 +64,7 @@ Output:
  'precision': 0.5959027691779738,
  'recall': 0.38036320303114696}
 ```
-Yes, if the reference is similar to the evaluated text, the score improved which is expected! Note that the score is between 0 and 1.
+Yes, if the reference is similar to the evaluated text, the score improves which is expected! Note that the score is always between 0 and 1.
 
 In addition, you can access all the logs including the generated questions and predicted answers. For instance, the generated questions on the source that were asked on the hypothesis are available via:
 ```
@@ -92,9 +92,9 @@ For using a virtual jupyter environment:
 ## Tasks specificities:
 
 ### Summarization:
-The project is a collaboration work between [LIP6](https://mlia.lip6.fr/) Lab and [ReciTAL Research](https://recital.ai/en/research-development/).
+The project is a collaboration work between [LIP6 Lab](https://mlia.lip6.fr/), [New York University](https://wp.nyu.edu/ml2/) and [ReciTAL Research](https://recital.ai/en/research-development/).
 
-Questeval also handle specificities of summarization with a Weighter to select only the questions asking about important facts that are worth to be summarized: read more in the original [paper](https://arxiv.org/abs/2103.12693). To activate this Weighter: *do_weighter=True*.
+QuestEval also handle specificities of summarization with a Weighter to select only the questions asking about important facts that are worth to be summarized: read more in the original [paper](https://arxiv.org/abs/2103.12693). To activate this Weighter: *do_weighter=True*.
 
 Paper link: https://arxiv.org/abs/2103.12693
 
@@ -112,13 +112,12 @@ How to cite:
 
 The metric is effective with its default parameters. It ranks better the systems than BLEU or SARI metrics as reported in (comming very soon).
 
-
 ### Data2text:
 
 We propose by default trained QA/QG models dealing with table inputs (e.g. E2E or Webnlg, see more in comming very soon). To load QuestEval for data2text tasks, specify *task=e2e* or *task=webnlg*. Note that you need a specific processing to linearised the tables. By default we handle the [GEM](https://gem-benchmark.com/) format for these two datasets. If you need an other preprocessing of the table, you can pass your custom function to Questeval: *src_preproc_pipe=custom_formating*.
 
 ### Multilingual Evaluation:
 
-QuestEval support non english evaluation: the parameter **language* can be set to *multi* to tackle multilingual data. For Question Generation and Answering we used the [m-Minilm model](https://github.com/microsoft/unilm/tree/master/minilm). For the answer selection, spacy does not support multilingual *noun chuncking* which might lead to poorer correlation with human jugement than in English Questeval: we are working on that!
+QuestEval supports non english evaluation: the parameter *language* can be set to *multi* to tackle multilingual texts. For Question Generation and Answering we used the [m-Minilm model](https://github.com/microsoft/unilm/tree/master/minilm). For the answer selection, spacy does not support multilingual *noun chuncking* which might lead to poorer correlation with human jugement than in English QuestEval: we are working on that!
 
 
