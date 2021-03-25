@@ -226,7 +226,9 @@ class QuestEval:
         if self.src_preproc_pipe is not None:
             source = self.src_preproc_pipe(source)
 
-        keys = ['src_hyp', 'hyp_src']
+        keys = []
+        if source:
+            keys += ['src_hyp', 'hyp_src']
         if reference:
             keys += ['ref_hyp', 'hyp_ref']
             if self.do_regularize:
