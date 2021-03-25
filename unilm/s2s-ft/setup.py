@@ -29,7 +29,7 @@ setup(
                       'regex != 2019.12.17',
                       'sentencepiece',
                       'sacremoses',
-                      'tensorboardX',
+                      #'tensorboardX',
                       # 'transformers <= 2.10.0'
                       ],
     extras_require=extras,
