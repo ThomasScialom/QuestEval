@@ -20,7 +20,7 @@ REQUIRED = [
     'xx_ent_wiki_sm @ https://github.com/explosion/spacy-models/releases/download/xx_ent_wiki_sm-3.0.0/xx_ent_wiki_sm-3.0.0.tar.gz',
     'transformers==3.0.1',
     'datasets==1.1.3',
-    'bert_score==0.3.8'
+    'bert_score==0.3.8',
     'pyarrow==0.17.1',
     'Unidecode==1.2.0',
 ]

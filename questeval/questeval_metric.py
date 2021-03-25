@@ -107,13 +107,14 @@ class QuestEval:
         if not os.path.exists(os.path.join(DIR, path_model)):
             os.makedirs(os.path.join(DIR, path_model), exist_ok=True)
             logging.info("Downloading models...")
-            zip_models_path = os.path.join(DIR, path_model + '.zip')
-            urllib.request.urlretrieve(os.path.join(ZIPPED_MODELS_URL, path_model.replace('models/','')) + '.zip')
-            with zipfile.ZipFile(zip_models_path, 'r') as zip_ref:
+            zip_model_path = os.path.join(DIR, path_model + '.zip')
+            zip_model_url = f"{ZIPPED_MODELS_URL}/{path_model.replace('models/', '')}.zip"
+            urllib.request.urlretrieve(zip_model_url, zip_model_path)
+            with zipfile.ZipFile(zip_model_path, 'r') as zip_ref:
                 zip_ref.extractall(os.path.join(DIR, path_model))
 
             logging.info("Removing archive...")
-            os.remove(zip_models_path)
+            os.remove(zip_model_path)
             shutil.rmtree(os.path.join(DIR, "models/models"))
 
         # Load the model
