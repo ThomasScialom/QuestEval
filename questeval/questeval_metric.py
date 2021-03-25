@@ -3,7 +3,6 @@ import os
 import json
 import urllib
 import zipfile
-import shutil
 import numpy as np
 import logging
 from datasets import load_metric
