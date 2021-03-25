@@ -47,9 +47,9 @@ print(score['scores'])
 ```
 Output:
 ```
-{'fscore': 0.2883088133952934,
- 'precision': 0.5038477301470266,
- 'recall': 0.07276989664356022}
+{fscore': 0.4346241996587881, 
+'precision': 0.593142730982557, 
+'recall': 0.27610566833501926}
 ```
 
 Yes, it works without any references, but if you have it you can also pass it as input:
@@ -60,9 +60,9 @@ print(score['scores'])
 ```
 Output:
 ```
-{'fscore': 0.48813298610456035,
- 'precision': 0.5959027691779738,
- 'recall': 0.38036320303114696}
+{'fscore': 0.5881927794730513, 
+'precision': 0.6674520451349357, 
+'recall': 0.5089335138111668}
 ```
 Yes, if the reference is similar to the evaluated text, the score improves which is expected! Note that the score is always between 0 and 1.
 
