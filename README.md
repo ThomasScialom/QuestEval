@@ -64,7 +64,7 @@ Output:
  'precision': 0.5959027691779738,
  'recall': 0.38036320303114696}
 ```
-Yes, if the reference is similar to the evaluated text, the score improved which is expected! Note that the score is between 0 and 1.
+Yes, if the reference is similar to the evaluated text, the score improves which is expected! Note that the score is always between 0 and 1.
 
 In addition, you can access all the logs including the generated questions and predicted answers. For instance, the generated questions on the source that were asked on the hypothesis are available via:
 ```
