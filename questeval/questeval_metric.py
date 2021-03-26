@@ -110,6 +110,8 @@ class QuestEval:
     def generic_load_model(self, path_model, is_task_QG=False):
         # Download the model
         if not os.path.exists(os.path.join(DIR, path_model)):
+            if not os.path.exists(os.path.join(DIR, 'models/')):
+                os.mkdir(os.path.join(DIR, 'models/'))
             # os.makedirs(os.path.join(DIR, path_model), exist_ok=True)
             logging.info("Downloading models...")
             zip_model_path = os.path.join(DIR, path_model + '.zip')
