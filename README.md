@@ -1,6 +1,6 @@
 # QuestEval
 
-***Note:** this is the branch for GEM: QuestEval does not support multilingual right now in GEP but you can do multilingual evaluation in the main branch.*
+***Note:** this is the branch for GEM: QuestEval does not support multilingual right now in GEM but you can do multilingual evaluation in the main branch.*
 
 QuestEval is an **NLG metric** to assess if two different inputs contain the same information. The metric, based on Question Generation and Answering can deal with **multimodal** and **multilingual** inputs. 
 It is the result from an (on-going) international collaboration, and so far it tackles various tasks:
