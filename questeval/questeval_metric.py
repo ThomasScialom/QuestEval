@@ -13,7 +13,7 @@ from questeval.utils import (
     split_on_punct,
     calculate_f1_squad,
 )
-from questeval.uni_utils import T2tUniModel
+#from questeval.uni_utils import T2tUniModel
 
 ZIPPED_MODELS_URL = "https://safeval.s3.eu-west-3.amazonaws.com"
 
@@ -38,7 +38,7 @@ class QuestEval:
         isCuda=False
     ):
 
-        self.AVAILABLE_LANGUAGES = ["en", "multi"]
+        self.AVAILABLE_LANGUAGES = ["en"] #, "multi"]
         self.AVAILABLE_TASKS = ["text2text", "summarization", "text_simplification", "E2E", "webnlg"]
 
         if task not in self.AVAILABLE_TASKS:
@@ -46,8 +46,13 @@ class QuestEval:
             task="text2text"
 
         if language not in self.AVAILABLE_LANGUAGES:
-            print(f"Language {language} is not known. Setting the default multilingual models.")
-            language = 'multi'
+            raise (
+                'Multilingual models are not handle in GEM. '
+                'Please check the main branch of QuestEval to use mutlilingual models: https://github.com/recitalAI/QuestEval'
+            )
+
+            #print(f"Language {language} is not known. Setting the default multilingual models.")
+            #language = 'multi'
 
         self.cache_mode = None
         self.cached_questions_article = None
@@ -123,7 +128,7 @@ class QuestEval:
         if 't5' in path_model.lower():
             load_model = load_t2t_model
         elif 'unilm' in path_model.lower() or 'minilm' in path_model.lower():
-            load_model = load_t2t_uni_model
+            raise ('Multilingual models are not handle in GEM. Please check the main branch of QuestEval to use mutlilingual models: https://github.com/recitalAI/QuestEval')
         else:
             raise ('Model Name Not Handled.')
 
@@ -499,16 +504,3 @@ def load_t2t_model(path_model, device, keep_score_idx=[], model_batch_size=48):
     )
 
 
-def load_t2t_uni_model(
-    path_model,
-    device,
-    keep_score_idx=[],
-    model_batch_size=48,
-):
-    isCuda = device != 'cpu'
-    return T2tUniModel(
-        path_model,
-        isCuda,
-        keep_score_idx,
-        model_batch_size,
-    )

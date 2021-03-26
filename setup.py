@@ -44,9 +44,6 @@ if not VERSION:
 else:
     about['__version__'] = VERSION
 
-# Installing a part of the repo
-os.system("pip install -e unilm/s2s-ft")
-
 # Where the magic happens:
 setup(
     name=NAME,
