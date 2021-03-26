@@ -54,17 +54,30 @@ Output:
 
 Yes, it works without any references, but if you have it you can also pass it as input:
 ```
-reference = """After wildfires consumed an entire town, students and teachers who had planned for remote classes found some comfort in staying connected amid the chaos."""
+reference = """After wildfires consumed the town, students who had planned for remote classes found some comfort in staying connected amid the chaos."""
 score = questeval.compute_all(summary, article, reference)
 print(score['scores'])
 ```
 Output:
 ```
-{'fscore': 0.5881927794730513, 
-'precision': 0.6674520451349357, 
-'recall': 0.5089335138111668}
+{'fscore': 0.577500509912398, 
+'precision': 0.6565178498363309, 
+'recall': 0.4984831699884652}
 ```
-Yes, if the reference is similar to the evaluated text, the score improves which is expected! Note that the score is always between 0 and 1.
+Note that the score is always between 0 and 1.
+
+Alternatively, you can compute the score by comparing the evaluated text only to the reference: 
+```
+score = questeval.compute_all(summary, None, reference)
+print(score['scores'])
+```
+Output:
+```
+'fscore': 0.720376820166008, 
+'precision': 0.7198929686901049, 
+'recall': 0.7208606716419111}
+```
+This means that **QuestEval can be used to evaluate any NLG task where references are available**.
 
 In addition, you can access all the logs including the generated questions and predicted answers. For instance, the generated questions on the source that were asked on the hypothesis are available via:
 ```
