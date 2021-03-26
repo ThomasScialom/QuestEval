@@ -1,6 +1,8 @@
 # QuestEval
 
-QuestEval is a quest for an **NLG metric** to assess if two different inputs contain the same information. The metric, based on Question Generation and Answering can deal with **multimodal** and **multilingual** inputs. 
+***Note:** this is the branch for GEM: QuestEval does not support multilingual right now in GEP but you can do multilingual evaluation in the main branch.*
+
+QuestEval is an **NLG metric** to assess if two different inputs contain the same information. The metric, based on Question Generation and Answering can deal with **multimodal** and **multilingual** inputs. 
 It is the result from an (on-going) international collaboration, and so far it tackles various tasks:
 
 - [Summarization](#summarization)
@@ -80,7 +82,7 @@ For tasks specificities, see bellow. In particular for:
 
 We also provide more examples in the Jupyter notebook *example/Examples.ipynb*. The notebook also contains all the code to reproduce the results in the paper *SAFEval: Summarization Asks for Fact-based Evaluation*.
 
-For using a virtual jupyter environment:
+To run the notebook in your environment:
 
 ```
 (questeval) $ conda install jupyter
