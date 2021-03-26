@@ -42,13 +42,12 @@ class QuestEval:
         self.AVAILABLE_TASKS = ["text2text", "summarization", "text_simplification", "E2E", "webnlg"]
 
         if task not in self.AVAILABLE_TASKS:
-            print(f"Task {task} is not known. Setting the default text2text task. ")
+            logging.warning(f"Task {task} is not known. Setting the default text2text task.")
             task="text2text"
 
         if language not in self.AVAILABLE_LANGUAGES:
             raise (
-                'Multilingual models are not handle in GEM. '
-                'Please check the main branch of QuestEval to use mutlilingual models: https://github.com/recitalAI/QuestEval'
+                'Multilingual models are not handle in GEM. Please check the main branch of QuestEval to use mutlilingual models: https://github.com/recitalAI/QuestEval'
             )
 
             #print(f"Language {language} is not known. Setting the default multilingual models.")
