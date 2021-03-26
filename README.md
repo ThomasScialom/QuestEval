@@ -123,7 +123,7 @@ How to cite:
 
 ### Text Simplification:
 
-The metric is effective with its default parameters. It ranks better the systems than BLEU or SARI metrics as reported in (comming very soon).
+For Text Simplification, we recommand to activate the BERTScore for computing the similairty between two answers: *do_BERTScore=True* when loading the metric. It ranks better the systems than BLEU or SARI metrics as reported in (comming very soon).
 
 ### Data2text:
 
