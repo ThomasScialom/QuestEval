@@ -88,7 +88,7 @@ class QuestEval:
             # 'name [ The Eagle ] , eatType [ coffee shop ] , food [ French ] , priceRange [ £ 2 0 - 2 5 ] , customer rating [ 3 out of 5 ] , area [ city centre ] , familyFriendly [ yes ] , near [ Burger King ]'
             # we handle by default the preprocessing of the table for webnlg and e2e given the GEM format (https://gem-benchmark.com/)
             # if your tables are in an other format, please pass a custom function for src_preproc_pipe
-            if task == 'e2e':
+            if task == 'E2E':
                 from questeval.data2text_objects.data_formating import linearize_e2e_input
                 self.src_preproc_pipe = linearize_e2e_input
             elif task == 'webnlg':
@@ -333,6 +333,14 @@ class QuestEval:
         score, penalty = 0, 0
 
         if len(f1_scores) > 0:
+
+            # sometimes the answers scores return a value ~1.000000X which is superior to 1
+            list_borned = lambda a_list: [max(min(1, x), 0) for x in a_list]
+            f1_scores = list_borned(f1_scores)
+            answ_scores = list_borned(answ_scores)
+            if self.do_BERTScore and bert_scores is not None:
+                bert_scores = list_borned(bert_scores)
+
             if self.do_consistency:
                 f1_scores, answ_scores, bert_scores = regularizer(f1_scores, answ_scores, bert_scores, ques_consists)
 
@@ -340,7 +348,9 @@ class QuestEval:
                 f1_scores, answ_scores, bert_scores = regularizer(f1_scores, answ_scores, bert_scores, weighter_probs)
 
             scores = f1_scores + answ_scores
-            if bert_scores is not None: scores += bert_scores
+            if self.do_BERTScore:
+                assert bert_scores is not None, 'BERTScore is None while do_BERTScore is activated'
+                scores += bert_scores
 
             score = np.average(scores)
             penalty = self.lambda_penalty * (1 - min(answ_scores))
