@@ -338,13 +338,16 @@ class QuestEval:
             list_borned = lambda a_list: [max(min(1, x), 0) for x in a_list]
             f1_scores = list_borned(f1_scores)
             answ_scores = list_borned(answ_scores)
-            if self.do_BERTScore and bert_scores is not None:
+            if self.do_BERTScore:
+                assert bert_scores is not None, 'BERTScore is None while do_BERTScore is activated'
                 bert_scores = list_borned(bert_scores)
 
             if self.do_consistency:
+                assert ques_consists is not None, "ques_consists is None. Please compute the score with ques_consists activate."
                 f1_scores, answ_scores, bert_scores = regularizer(f1_scores, answ_scores, bert_scores, ques_consists)
 
-            if weighter_probs is not None:
+            if self.do_weighter is not None:
+                assert weighter_probs is not None, "weighter_probs is None. Please compute the score with ques_consists activate."
                 f1_scores, answ_scores, bert_scores = regularizer(f1_scores, answ_scores, bert_scores, weighter_probs)
 
             scores = f1_scores + answ_scores
