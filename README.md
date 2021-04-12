@@ -28,7 +28,7 @@ $ conda activate questeval
 (questeval) $ pip install -e .
 ```
 
-The trained [models](https://safeval.s3.eu-west-3.amazonaws.com/) will be downloaded on the fly on the folder *models* in the current root folder *safeval*.
+The trained [models](https://safeval.s3.eu-west-3.amazonaws.com/) will be downloaded on the fly on the folder *models* in the current root folder *questeval*.
 Those QA/QG/Policy models are the one used to compute all the scores reported in the paper. Alternatively, you can use your own models.
 
 ## Using QuestEval 
@@ -91,7 +91,7 @@ For tasks specificities, see bellow. In particular for:
 - [Data2text](#data2text)
 - [Multilingual Evaluation](#multilingual-evaluation)
 
-We also provide more examples in the Jupyter notebook *example/Examples.ipynb*. The notebook also contains all the code to reproduce the results in the paper *SAFEval: Summarization Asks for Fact-based Evaluation*.
+We also provide more examples in the Jupyter notebook *example/Examples.ipynb*. The notebook also contains all the code to reproduce the results in the paper *QuestEval: Summarization Asks for Fact-based Evaluation*.
 
 To run the notebook in your environment:
 
@@ -113,8 +113,8 @@ Paper link: https://arxiv.org/abs/2103.12693
 
 How to cite:
 ```
-@article{scialom2020SAFEval,
-  title={SAFEval: Summarization Asks for Fact-based Evaluation},
+@article{scialom2020QuestEval,
+  title={QuestEval: Summarization Asks for Fact-based Evaluation},
   author={Scialom, Thomas and Dray, Paul-Alexis and Gallinari Patrick and Lamprier Sylvain and Piwowarski Benjamin and Staiano Jacopo and Wang Alex},
   journal={arXiv preprint arXiv:2103.12693},
   year={2021}
