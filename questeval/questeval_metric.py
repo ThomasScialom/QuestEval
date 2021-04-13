@@ -225,7 +225,8 @@ class QuestEval:
 
         # Preprocessing
         if self.src_preproc_pipe is not None:
-            source = self.src_preproc_pipe(source)
+            if source is not None:
+                source = self.src_preproc_pipe(source)
 
         keys = []
         if source:
