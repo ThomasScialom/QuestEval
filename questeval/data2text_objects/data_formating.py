@@ -16,15 +16,12 @@ class WrongE2EFormat(Exception):
 
 def linearize_e2e_input(input, lowercase=False, format='gem'):
     """
-    Linearize a WebNLG input for QuestEval.
-    Input must be a list of triples, each being a string with two "|".
+    Linearize an E2E input for QuestEval.
+    Input must be a string, in standard E2E format.
     Example:
-        [
-            "(15788)_1993_SB | discoverer | Donal_O'Ceallaigh",
-            "(15788)_1993_SB | epoch | 2006-03-06"
-        ]
+        'name[The Eagle], eatType[coffee shop], food[Japanese]'
 
-    lowercase=True indicates that you want all strings to be lowercased.
+    lowercase=True indicates that you want all tokens to be lowercased.
     """
     if format != 'gem':
         raise ValueError(f'Unsupported format for now: {format}')
