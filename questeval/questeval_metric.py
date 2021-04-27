@@ -172,8 +172,7 @@ class QuestEval:
 
         models['Weighter'] = None
         if self.do_weighter:
-            path_model = os.path.join(DIR, f"models/Weighter_en_T5")
-            models['Weighter'] = self.load_model(path_model, is_task_QG=False)
+            models['Weighter'] = self.generic_load_model(f"models/Weighter_en_T5", is_task_QG=False)
 
         # linking already loaded models for other keys
         for k in ["src", "ref"]:
