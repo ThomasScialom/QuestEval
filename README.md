@@ -47,9 +47,9 @@ print(score['scores'])
 ```
 Output:
 ```
-{fscore': 0.4346241996587881, 
-'precision': 0.593142730982557, 
-'recall': 0.27610566833501926}
+{fscore': 0.2883088133952934, 
+'precision': 0.5038477301470266, 
+'recall': 0.07276989664356022}
 ```
 
 Yes, it works without any references, but if you have it you can also pass it as input:
@@ -60,9 +60,9 @@ print(score['scores'])
 ```
 Output:
 ```
-{'fscore': 0.577500509912398, 
-'precision': 0.6565178498363309, 
-'recall': 0.4984831699884652}
+{'fscore': 0.4750318370987159, 
+'precision': 0.5820995386296233, 
+'recall': 0.36796413556780855}
 ```
 Note that the score is always between 0 and 1.
 
@@ -73,9 +73,9 @@ print(score['scores'])
 ```
 Output:
 ```
-'fscore': 0.720376820166008, 
-'precision': 0.7198929686901049, 
-'recall': 0.7208606716419111}
+'fscore': 0.6617548608021384, 
+'precision': 0.66035134711222, 
+'recall': 0.6631583744920568}
 ```
 This means that **QuestEval can be used to evaluate any NLG task where references are available**.
 
