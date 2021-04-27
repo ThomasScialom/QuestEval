@@ -347,7 +347,7 @@ class QuestEval:
                 assert ques_consists is not None, "ques_consists is None. Please compute the score with ques_consists activate."
                 f1_scores, answ_scores, bert_scores = regularizer(f1_scores, answ_scores, bert_scores, ques_consists)
 
-            if self.do_weighter:
+            if self.do_weighter and weighter_probs != None:
                 f1_scores, answ_scores, bert_scores = regularizer(f1_scores, answ_scores, bert_scores, weighter_probs)
 
             scores = f1_scores + answ_scores
