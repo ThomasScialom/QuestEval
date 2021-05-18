@@ -18,7 +18,7 @@ Planned extensions:
 - Migration to the last Hugging Face Transformers 
 - Ability to use your own models
 
-## Installing QuestEval
+## 1/ Installing QuestEval
 ```
 $ conda create --name questeval python=3.7
 $ conda activate questeval
@@ -35,7 +35,7 @@ $ conda activate questeval
 
 The pre-trained QA/QG models will be automatically downloaded. Alternatively, you can use your own models.
 
-## Using QuestEval 
+## 2/ Using QuestEval 
 
 The default task is *text2text* and the default language is *en*. It allows to measure the content similarity between any English texts:
 
@@ -97,9 +97,9 @@ To run the notebook in your environment:
 (questeval) $ pip install ipywidgets
 ```
 
-## Tasks specificities:
+## 3/ Tasks specificities
 
-### Summarization:
+### Summarization
 The project is a collaboration work between [LIP6 Lab](https://mlia.lip6.fr/), [New York University](https://wp.nyu.edu/ml2/) and [ReciTAL Research](https://recital.ai/en/research-development/).
 
 QuestEval also handles summarization specificities: we developped a Weighter that selects only the questions asking about the important facts that are worth to be summarized. Read more in the original [paper](https://arxiv.org/abs/2103.12693). To activate this Weighter `do_weighter=True` when loading the metric.
@@ -116,7 +116,7 @@ How to cite:
 }
 ```
 
-### Text Simplification:
+### Text Simplification
 
 For Text Simplification, we recommend to activate the BERTScore for computing the similarity between two answers `do_BERTScore=True` when loading the metric. It ranks better the systems than BLEU or SARI metrics as reported in the paper.
 
@@ -131,7 +131,7 @@ How to cite:
   year={2021}
 }
 ```
-### Data2text:
+### Data2text
 
 We propose by default trained QA/QG models dealing with table inputs (e.g. E2E or Webnlg, see more in coming very soon). To load QuestEval for data2text tasks, specify *task=e2e* or *task=webnlg*. Note that you need a specific processing to linearised the tables. By default we handle the [GEM](https://gem-benchmark.com/) format for these two datasets. If you need an other preprocessing of the table, you can pass your custom function to Questeval: *src_preproc_pipe=custom_formating*.
 
@@ -147,11 +147,11 @@ How to cite:
 }
 ```
 
-### Image Captioning:
+### Image Captioning
 
 *[Coming Soon]*
 
-### Multilingual Evaluation:
+### Multilingual Evaluation
 
 QuestEval supports non english evaluation: the parameter `language` can be set to `multi` to tackle non-English texts. For Question Generation and Answering we used the [m-Minilm model](https://github.com/microsoft/unilm/tree/master/minilm). For the answer selection, spacy does not support multilingual *noun chuncking*. For this reason, QuestEval can be less effective than its English version: **we are working on that!**
 
