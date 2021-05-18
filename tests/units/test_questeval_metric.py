@@ -7,4 +7,6 @@ from tests.resources.constants import (
 def test_questeval_metric():
     questeval = QuestEval()
     score = questeval.compute_all(HYP_1, SRC_1)
-    assert score['scores'] == RES_1
+
+    for k in score['scores'].keys():
+        assert round(score['scores'][k], 4) == round(RES_1[k], 4)
