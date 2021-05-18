@@ -8,7 +8,7 @@ URL = 'https://github.com/recitalAI/QuestEval'
 EMAIL = 't.scialom@gmail.com'
 AUTHOR = 'Thomas Scialom'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = '0.0.1'
+VERSION = '0.1.1'
 
 REQUIRED = [
     'spacy==3.0.0',
