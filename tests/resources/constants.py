@@ -29,10 +29,10 @@ RES_3 = {'source_reference': {'fscore': 0.2112355865345556, 'precision': 0.37490
 HYP_multi_1 = """Le SCAF doit remplacer en 2040 leurs avions de combat Rafale."""
 SRC_multi_1 = """La France, l’Allemagne et l’Espagne ont annoncé lundi avoir trouvé un accord pour lancer les contrats d’études du système de combat aérien futur (SCAF) , à l’issue d’âpres négociations et de rivalités industrielles. « Les discussions menées (…) au cours des derniers mois ont permis d’aboutir à un accord équilibré entre les différents partenaires pour la prochaine étape de la phase de démonstration du programme », affirment dans une déclaration commune la ministre des armées française, Florence Parly, et ses homologues allemande et espagnole, Annegret Kramp-Karrenbauer et Margarita Robles. Ces études, dites de « phase 1B », portent sur environ 3,5 milliards d’euros d’ici à 2024, et sont réparties et financées à parts égales entre les trois pays, selon le cabinet de la ministre française"""
 REF_multi_1 = """Le système de combat aérien futur (SCAF) doit remplacer à l’horizon 2040 leurs avions de combat Rafale et Eurofighter."""
-RES_multi_1 = {'source_reference': {'fscore': 0.22226181240204737, 'precision': 0.27466861269749643, 'recall': 0.1698550121065983} ,
-         'source': {'fscore': 0.08157040630300928, 'precision': 0.04952482879161835, 'recall': 0.11361598381440022} ,
-         'reference': {'fscore': 0.3629532185010855, 'precision': 0.4998123966033745, 'recall': 0.2260940403987964}
-         }
+RES_multi_1 = {'source_reference': {'fscore': 0.22244083830766959, 'precision': 0.2748496983294899, 'recall': 0.17003197828584926},
+               'source': {'fscore': 0.0819194793418449, 'precision': 0.04988698661327362, 'recall': 0.11395197207041617},
+               'reference': {'fscore': 0.36296219727349427, 'precision': 0.4998124100457062, 'recall': 0.22611198450128236}
+               }
 
 # Summarisation
 HYP_sum_1 = """The elderly woman suffered from diabetes and hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""

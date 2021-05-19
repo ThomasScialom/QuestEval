@@ -24,7 +24,7 @@ class QuestEval:
         task="text2text",
         language="en",
         limit_sent=5,
-        answer_types=['NER', 'NOUN'],
+        answer_types=('NER', 'NOUN'),
         src_preproc_pipe=None,
         qg_beam_size=1,
         QG_top_p=1,
@@ -102,7 +102,7 @@ class QuestEval:
             self.spacy_pipeline = spacy.load('en_core_web_sm')
         else:
             logging.warning("Removing 'NOUN CHUNK' from the candidate answers in answer_types. It is not yet handled for non English texts.")
-            self.answer_types.remove('NOUN')
+            self.answer_types = ('NER')
             self.spacy_pipeline = spacy.load('xx_ent_wiki_sm')
 
 
