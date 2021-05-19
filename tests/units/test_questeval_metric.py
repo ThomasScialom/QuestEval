@@ -118,7 +118,7 @@ def test_questeval_metric_summarization():
     test_questeval_score(questeval=questeval, res=RES_sum_2['source_reference_no_weighter'], HYP=HYP_sum_2, SRC=SRC_sum_2, REF=REF_sum_2)
 
     # Summarization example 2 - source
-    test_questeval_score(questeval=questeval, res=RES_sum_2['source_no_weighter'], HYP=HYP_sum_2, SRC=SRC_sum_2 REF=None)
+    test_questeval_score(questeval=questeval, res=RES_sum_2['source_no_weighter'], HYP=HYP_sum_2, SRC=SRC_sum_2, REF=None)
 
     # Summarization example 2 - reference
     test_questeval_score(questeval=questeval, res=RES_sum_2['reference'], HYP=HYP_sum_2, SRC=None, REF=REF_sum_2)
