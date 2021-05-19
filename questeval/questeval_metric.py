@@ -49,6 +49,9 @@ class QuestEval:
             print(f"Language {language} is not known. Setting the default multilingual models.")
             language = 'multi'
 
+        if task == 'summarization' and do_weighter == False:
+            logging.warning("Task is summarization but the weighter is deactivate. Set do_weighter=True to activate it when loading QuestEval.")
+
         self.cache_mode = None
         self.cached_questions_article = None
         self.cache_index = None

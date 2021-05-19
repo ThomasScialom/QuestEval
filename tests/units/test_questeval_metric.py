@@ -18,16 +18,16 @@ def test_questeval_exceptions():
     questeval = QuestEval()
 
     with pytest.raises(AssertionError) as loc_error:
-        questeval.compute_all(hypothesis=None, source=None, reference=None)
+        test_questeval_score(questeval, res=-1, HYP=None, SRC=None, REF=None)
 
     with pytest.raises(AssertionError) as loc_error:
-        questeval.compute_all(hypothesis="", source=None, reference=None)
+        test_questeval_score(questeval, res=-1,HYP="", SRC=None, REF=None)
 
     with pytest.raises(AssertionError) as loc_error:
-        questeval.compute_all(hypothesis="", source="", reference="")
+        test_questeval_score(questeval, res=-1,HYP="", SRC="", REF="")
 
     with pytest.raises(AssertionError) as loc_error:
-        questeval.compute_all(hypothesis="This is a test", source="Test", reference="")
+        test_questeval_score(questeval, res=-1,HYP="This is a test", SRC="Test", REF="")
 
 
 def test_questeval_metric_text2text():
@@ -69,20 +69,20 @@ def test_questeval_metric_text2text():
 
 def test_questeval_metric_text2text_mutlilingual():
 
-    questeval = QuestEval(isCuda=True, language='multi')
+    questeval = QuestEval(language='multi')
 
     # French example - source and reference
-    test_questeval_score(questeval=questeval, res=RES_multi_1['source_reference_with_weighter'], HYP=HYP_multi_1, SRC=SRC_multi_1, REF=REF_multi_1)
+    test_questeval_score(questeval=questeval, res=RES_multi_1['source_reference'], HYP=HYP_multi_1, SRC=SRC_multi_1, REF=REF_multi_1)
 
     # French example - source only
-    test_questeval_score(questeval=questeval, res=RES_multi_1['source_with_weighter'], HYP=HYP_multi_1, SRC=SRC_multi_1, REF=None)
+    test_questeval_score(questeval=questeval, res=RES_multi_1['source'], HYP=HYP_multi_1, SRC=SRC_multi_1, REF=None)
 
     # French example - reference only
     test_questeval_score(questeval=questeval, res=RES_multi_1['reference'], HYP=HYP_multi_1, SRC=None, REF=REF_multi_1)
 
 def test_questeval_metric_summarization():
 
-    questeval = QuestEval(isCuda=True, language='en', task="summarization")
+    questeval = QuestEval(task="summarization", do_weighter=True)
 
     # Summarization example 1 - source and reference
     test_questeval_score(questeval=questeval, res=RES_sum_1['source_reference_with_weighter'], HYP=HYP_sum_1, SRC=SRC_sum_1, REF=REF_sum_1)
@@ -126,7 +126,7 @@ def test_questeval_metric_summarization():
 
 def test_questeval_metric_data2text():
 
-    questeval = QuestEval(isCuda=True, task="webnlg")
+    questeval = QuestEval(task="webnlg")
 
     # Checking the source linearization
     with pytest.raises(AssertionError) as loc_error:

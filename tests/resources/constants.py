@@ -38,23 +38,24 @@ RES_multi_1 = {'source_reference': {'fscore': 0.22226181240204737, 'precision': 
 HYP_sum_1 = """The elderly woman suffered from diabetes and hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""
 SRC_sum_1 = """(CNN) -- An American woman died aboard a cruise ship that docked at Rio de Janeiro on Tuesday, the same ship on which 86 passengers previously fell ill, according to the state-run Brazilian news agency, Agencia Brasil. The American tourist died aboard the MS Veendam, owned by cruise operator Holland America. Federal Police told Agencia Brasil that forensic doctors were investigating her death. The ship's doctors told police that the woman was elderly and suffered from diabetes and hypertension, according the agency. The other passengers came down with diarrhea prior to her death during an earlier part of the trip, the ship's doctors said. The Veendam left New York 36 days ago for a South America tour."""
 REF_sum_1 = """The elderly woman suffered from diabetes and hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""
-RES_sum_1 = {'source_reference_with_weighter': {'fscore': 0.7281827250073019, 'precision': 0.8726561395628778, 'recall': 0.5837093104517258} ,
-             'source_with_weighter': {'fscore': 0.46101817770821396, 'precision': 0.749965006819366, 'recall': 0.172071348597062} ,
-             'reference': {'fscore': 0.9953472723063896, 'precision': 0.9953472723063896, 'recall': 0.9953472723063896},
-             'source_reference_no_weighter': {'fscore': 0.7456455610469302, 'precision': 0.8726561395628778, 'recall': 0.6186349825309827} ,
-             'source_no_weighter': {'fscore': 0.4959438497874709, 'precision': 0.749965006819366, 'recall': 0.24192269275557587}
-             }
+RES_sum_1 = {'source_reference_with_weighter':  {'fscore': 0.6692587587025002, 'precision': 0.8098319821841119, 'recall': 0.5286855352208885},
+             'source_with_weighter': {'fscore': 0.4594899038492005, 'precision': 0.740636350812424, 'recall': 0.1783434568859771},
+             'reference': {'fscore': 0.8790276135557998, 'precision': 0.8790276135557998, 'recall': 0.8790276135557998},
+             'source_reference_no_weighter': {'fscore': 0.6919914141263444, 'precision': 0.8098319821841119, 'recall': 0.5741508460685767},
+             'source_no_weighter': {'fscore': 0.5049552146968888, 'precision': 0.740636350812424, 'recall': 0.2692740785813536}
+}
+
 
 
 HYP_sum_2 = """The elderly woman suffered from diabetes and hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""
 SRC_sum_2 = """(CNN) -- An American woman died aboard a cruise ship that docked at Rio de Janeiro on Tuesday, the same ship on which 86 passengers previously fell ill, according to the state-run Brazilian news agency, Agencia Brasil. The American tourist died aboard the MS Veendam, owned by cruise operator Holland America. Federal Police told Agencia Brasil that forensic doctors were investigating her death. The ship's doctors told police that the woman was elderly and suffered from diabetes and hypertension, according the agency. The other passengers came down with diarrhea prior to her death during an earlier part of the trip, the ship's doctors said. The Veendam left New York 36 days ago for a South America tour."""
 REF_sum_2 = """The woman suffered from hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""
-RES_sum_2 = {'source_reference_with_weighter': {'fscore': 0.7275152492158139, 'precision': 0.8713211879799019, 'recall': 0.5837093104517258},
-             'source_with_weighter': {'fscore': 0.46101817770821396, 'precision': 0.749965006819366, 'recall': 0.172071348597062},
-            'reference': {'fscore': 0.9940123207234137, 'precision': 0.9926773691404378, 'recall': 0.9953472723063896},
-             'source_reference_no_weighter': {'fscore': 0.7449780852554423, 'precision': 0.8713211879799019, 'recall': 0.6186349825309827},
-             'source_no_weighter': {'fscore': 0.4959438497874709, 'precision': 0.749965006819366, 'recall': 0.24192269275557587},
-             }
+RES_sum_2 = {'source_reference_with_weighter': {'fscore': 0.5935964883746341, 'precision': 0.7038011484286731, 'recall': 0.4833918283205951},
+             'source_with_weighter': {'fscore': 0.4594899038492005, 'precision': 0.740636350812424, 'recall': 0.1783434568859771},
+             'reference': {'fscore': 0.7277030729000677, 'precision': 0.6669659460449223, 'recall': 0.7884401997552131},
+             'source_reference_no_weighter': {'fscore': 0.6163291437984783, 'precision': 0.7038011484286731, 'recall': 0.5288571391682834},
+             'source_no_weighter': {'fscore': 0.5049552146968888, 'precision': 0.740636350812424, 'recall': 0.2692740785813536}
+            }
 
 # data2text
 HYP_D2T_1 = "1950 da was discovered by carl."
