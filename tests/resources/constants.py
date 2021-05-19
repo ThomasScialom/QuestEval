@@ -61,7 +61,7 @@ RES_sum_2 = {'source_reference_with_weighter': {'fscore': 0.5935964883746341, 'p
 HYP_D2T_1 = "1950 da was discovered by carl."
 SRC_D2T_1 = ["(29075)_1950_da | discoverer | carl_a._wirtanen"]
 REF_D2T_1 = "( 29075 ) 1950 da was discovered by carl a wirtanen ."
-RES_D2T_1 = {'source_reference': {'fscore': 0.6894101215752926, 'precision': 0.8738359598846728, 'recall': 0.5049842832659124} ,
-             'source': {'fscore': 0.37886451452504843, 'precision': 0.7477317804004997, 'recall': 0.009997248649597168},
-             'reference': {'fscore': 0.9999557286255367, 'precision': 0.9999401393688458, 'recall': 0.9999713178822276}
-             }
+RES_D2T_1 = {'source_reference': {'fscore': 0.6919757380524364, 'precision': 0.8549636328132086, 'recall': 0.5289878432916642},
+             'source': {'fscore': 0.5880022420672403, 'precision': 0.8252305866710635, 'recall': 0.350773897463417},
+             'reference': {'fscore': 0.7959492340376325, 'precision': 0.8846966789553536, 'recall': 0.7072017891199114}
+            }

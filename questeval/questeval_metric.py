@@ -38,8 +38,8 @@ class QuestEval:
         isCuda=False
     ):
 
-        self.AVAILABLE_LANGUAGES = ["en", "multi"]
-        self.AVAILABLE_TASKS = ["text2text", "summarization", "text_simplification", "E2E", "webnlg"]
+        self.AVAILABLE_LANGUAGES = ("en", "multi")
+        self.AVAILABLE_TASKS = ("text2text", "summarization", "text_simplification", "E2E", "webnlg")
 
         if task not in self.AVAILABLE_TASKS:
             print(f"Task {task} is not known. Setting the default text2text task. ")
