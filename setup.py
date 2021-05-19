@@ -12,6 +12,7 @@ VERSION = '0.1.1'
 
 REQUIRED = [
     'spacy==3.0.0',
+    'nltk==3.6.2',
     'en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0.tar.gz',
     'xx_ent_wiki_sm @ https://github.com/explosion/spacy-models/releases/download/xx_ent_wiki_sm-3.0.0/xx_ent_wiki_sm-3.0.0.tar.gz',
     'transformers==3.0.1',
@@ -19,7 +20,7 @@ REQUIRED = [
     'bert_score==0.3.8',
     'pyarrow==0.17.1',
     'Unidecode==1.2.0',
-    'pytest'=='6.2.4'
+    'pytest==6.2.4'
 ]
 
 EXTRAS = {
