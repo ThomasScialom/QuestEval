@@ -18,7 +18,7 @@ from questeval.utils import (
     calculate_BERTScore,
     extract_table_answers
 )
-from questeval.uni_utils import T2tUniModel
+#from questeval.uni_utils import T2tUniModel todo
 
 ZIPPED_MODELS_URL = "https://safeval.s3.eu-west-3.amazonaws.com"
 
@@ -727,7 +727,7 @@ class QuestEval:
         if type_model == 't5':
             load_model = load_t2t_model
         elif type_model == 'unilm':
-            load_model = load_t2t_uni_model
+            load_model = None #load_t2t_uni_model #todo
 
         model = load_model(path_model, device, keep_score_idx, model_batch_size, top_p)
 
@@ -819,6 +819,8 @@ def load_t2t_model(path_model,
         model.top_p = top_p
     return model
 
+
+"""
 def load_t2t_uni_model(
     path_model,
     device,
@@ -837,3 +839,4 @@ def load_t2t_uni_model(
         model.top_p = top_p
 
     return model
+"""
