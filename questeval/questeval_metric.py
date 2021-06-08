@@ -2,44 +2,86 @@ from typing import List, Tuple
 import os
 import json
 import urllib
+import hashlib # todo setup.py
 import zipfile
 import numpy as np
 import logging
 from datasets import load_metric
 import spacy
-from questeval import DIR
+import torch
+import transformers
+from questeval import DIR, _version_
 from questeval.utils import (
     APIQA,
-    split_on_punct,
+    sentencize,
     calculate_f1_squad,
+    calculate_BERTScore,
+    extract_table_answers
 )
 from questeval.uni_utils import T2tUniModel
 
 ZIPPED_MODELS_URL = "https://safeval.s3.eu-west-3.amazonaws.com"
 
+# todo : refact model loader wrt PAD
+
+# todo
+#  train weighter / remove prefixe
+#  train QG sur squad / QA synth
+#  remove prefixe
+
 
 class QuestEval:
     def __init__(
         self,
-        task="text2text",
-        language="en",
-        limit_sent=5,
-        answer_types=('NER', 'NOUN'),
+        task: str = "text2text",
+        language: str = "en",
+        answer_types: Tuple = ('NER', 'NOUN'),
+        list_scores: Tuple = ('bertscore', 'answerability', 'f1'),
         src_preproc_pipe=None,
-        qg_beam_size=1,
-        QG_top_p=1,
-        lambda_penalty=-0.0,
-        do_weighter=False,
-        do_BERTScore=False,
-        do_regularize=False,
-        do_consistency=False,
-        qg_batch_size=None,
-        clf_batch_size=None,
-        isCuda=False
+        do_weighter: bool = False,
+        do_consistency: bool = False,
+        qg_batch_size: int = 36,
+        clf_batch_size: int = 48,
+        limit_sent: int = 5,
+        QG_top_p: float = 1.0,
+        isCuda: bool = True
     ):
+        """
+        Main class for the QuestEval metric
+
+        Args:
+            task (:str):
+                the task to evaluate with QuestEval
+
+        Return:
+            :obj:`torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
+        """
+
+        """
+
+        format for the json logs:
+            hash(txt) #json file name
+                {
+                'type': type
+                'text': text or pointer if image
+                'self': {answer_type_1: {'answers': [answers],
+                                         {'model_QG_1': {'questions': [questions],
+                                                         'model_Weighter_1': [weights]
+                                                        }
+                                         }
+                        }
+                'asked': {question_1: {model_QA_1:  'answer': answer,
+                                                    'answerability': score
+                                                    'ground_truth': {answer_1: {'f1': score,
+                                                                              'bertscore: score}
+                                    }
+                        }
+                }
+                """
+
 
         self.AVAILABLE_LANGUAGES = ("en", "multi")
-        self.AVAILABLE_TASKS = ("text2text", "summarization", "text_simplification", "E2E", "webnlg")
+        self.AVAILABLE_TASKS = ("text2text", "summarization", "text_simplification", "data2text")
 
         if task not in self.AVAILABLE_TASKS:
             print(f"Task {task} is not known. Setting the default text2text task. ")
@@ -52,49 +94,42 @@ class QuestEval:
         if task == 'summarization' and do_weighter == False:
             logging.warning("Task is summarization but the weighter is deactivate. Set do_weighter=True to activate it when loading QuestEval.")
 
-        self.cache_mode = None
-        self.cached_questions_article = None
-        self.cache_index = None
+        self.log_dir = os.path.join(DIR, 'logs')
+        self.hash_files = set(os.listdir(self.log_dir))
 
         self.task = task
         self.language = language
 
+        self.answer_types = answer_types
+
         self.src_preproc_pipe = src_preproc_pipe
+        self.limit_sent = limit_sent
         self.sep = "</s>"
         self.qg_prefix = None
-        self.answer_types = answer_types
-        self.limit_sent = limit_sent
-        self.qg_beam_size = qg_beam_size
+
         self.qg_batch_size = qg_batch_size
         self.clf_batch_size = clf_batch_size
         self.QG_top_p = QG_top_p
-        self.lambda_penalty = lambda_penalty
-        self.do_regularize = do_regularize
+        self.device = 'cuda' if (torch.cuda.is_available() and isCuda) else 'cpu'
+
+        self.reduction_multi_refs = max
         self.do_consistency = do_consistency
         self.do_weighter = do_weighter
-        self.do_BERTScore = do_BERTScore
-        self.metric_BERTScore = load_metric("bertscore")
-        self.device = 'cuda' if isCuda else 'cpu'
+        self.list_scores = list_scores
+        if 'bertscore' in self.list_scores:
+            self.metric_BERTScore = load_metric("bertscore")
 
         self.keep_score_idx = None # will be defined later in load_model wrt to the QA model loaded
-
-        if self.qg_batch_size  is None:
-            # Should fit for a 11G ram GPU.
-            self.qg_batch_size = max(36 // self.qg_beam_size, 1)
-        if self.clf_batch_size is None:
-            self.clf_batch_size = 48
-
         self.models = self.load_all_models()
 
         if self.src_preproc_pipe == None:
-            # table should be linearized for our QA/QG format this way:
-            # 'name [ The Eagle ] , eatType [ coffee shop ] , food [ French ] , priceRange [ £ 2 0 - 2 5 ] , customer rating [ 3 out of 5 ] , area [ city centre ] , familyFriendly [ yes ] , near [ Burger King ]'
-            # we handle by default the preprocessing of the table for webnlg and e2e given the GEM format (https://gem-benchmark.com/)
-            # if your tables are in an other format, please pass a custom function for src_preproc_pipe
-            if task == 'E2E':
-                from questeval.data2text_objects.data_formating import linearize_e2e_input
-                self.src_preproc_pipe = linearize_e2e_input
-            elif task == 'webnlg':
+            """
+            structured tables should be linearized for our QA/QG format this way:
+            'name [ The Eagle ] , eatType [ coffee shop ] , food [ French ] , priceRange [ £ 2 0 - 2 5 ] , customer rating [ 3 out of 5 ] , area [ city centre ] , familyFriendly [ yes ] , near [ Burger King ]'
+            we handle by default the preprocessing of the table for webnlg given the GEM format (https://gem-benchmark.com/)
+            if your tables are in an other format, please pass a custom function for src_preproc_pipe
+            """
+            if task == 'data2text':
                 from questeval.data2text_objects.data_formating import linearize_webnlg_input
                 self.src_preproc_pipe = linearize_webnlg_input
 
@@ -106,7 +141,532 @@ class QuestEval:
             self.spacy_pipeline = spacy.load('xx_ent_wiki_sm')
 
 
-    def generic_load_model(self, path_model, is_task_QG=False):
+    def corpus_questeval(self,
+                         hypothesis: List[str],
+                         sources: List[str] = None,
+                         list_references: List[List[str]] = None,
+                         batch_size: int = 512):
+
+        assert sources is not None or list_references is not None, "you need to provide at least the sources or the references"
+        if list_references is not None:
+            assert len(list_references) == len(hypothesis)
+        if sources is not None:
+            assert len(sources) == len(hypothesis)
+
+
+        scores = []
+        nb_batch = len(range(0, len(hypothesis), batch_size))
+        for batch_idx in range(0, len(hypothesis), batch_size):
+            logging.info(f"Proceeding batch {batch_idx}/{nb_batch}")
+            batch_sources, batch_list_references = None, None
+            if sources is not None:
+                batch_sources = sources[batch_idx:batch_idx+batch_size]
+            if list_references is not None:
+                batch_list_references = list_references[batch_idx:batch_idx+batch_size]
+            scores += self._batch_questeval(hypothesis=hypothesis[batch_idx:batch_idx+batch_size],
+                                           sources=batch_sources,
+                                           list_references=batch_list_references,
+            )
+
+        result = {'corpus_score': np.average(scores), 'ex_level_scores': scores}
+        return result
+
+
+    def _batch_questeval(self,
+                        hypothesis: List[str],
+                        sources: List[str] = None,
+                        list_references: List[List[str]] = None,
+    ):
+
+        list_compared_logs = []
+
+        # Hypothesis
+        hyp_logs, hyp_hashes = self.texts2logs(hypothesis, type_logs='hyp')
+
+        # Source
+        if sources is not None:
+            src_logs, src_hashes = self.texts2logs(sources, type_logs='src')
+            # Asking the questions on the compared text
+            self.compute_question_answering(src_logs, hyp_logs, 'src', 'hyp')
+            self.compute_question_answering(hyp_logs, src_logs, 'hyp', 'src')
+            # Compute the similarity scores
+            self.compute_answer_similarity_scores(src_logs)
+            # Serialise logs
+            self.serialize_logs(src_logs, src_hashes)
+            list_compared_logs.append(src_logs)
+
+        # Reference
+        if list_references is not None:
+            for references in list_references:
+                ref_logs, ref_hashes = self.texts2logs(references, type_logs='ref')
+                # Asking the questions on the compared text
+                self.compute_question_answering(ref_logs, hyp_logs, 'ref', 'hyp')
+                self.compute_question_answering(hyp_logs, ref_logs, 'hyp', 'ref')
+                # Compute the similarity scores
+                self.compute_answer_similarity_scores(ref_logs)
+                # Serialise logs
+                self.serialize_logs(ref_logs, ref_hashes)
+                list_compared_logs.append(ref_logs)
+
+        # Compute the similarity scores for hyp
+        self.compute_answer_similarity_scores(hyp_logs)
+        # Serialise hyp logs
+        self.serialize_logs(hyp_logs, hyp_hashes)
+        list_compared_logs = [[list_compared_logs[i][j]
+                              for i in range(len(list_compared_logs))]
+                              for j in range(len(list_compared_logs[0]))
+                              ]
+
+        # Calculate Score
+        scores = []
+        for hyps_log, compared_logs in zip(hyp_logs, list_compared_logs):
+            scores.append(self.calculate_score_from_logs(hyps_log, compared_logs))
+
+        return scores
+
+
+    @staticmethod
+    def get_log_hash(string: str
+    ) -> str:
+        hash_object = hashlib.sha512(string.encode('utf-8'))
+        hex_dig = hash_object.hexdigest()
+        return hex_dig
+
+
+    def load_logs(self,
+                  texts: list,
+                  type_logs: str
+    ):
+
+        logs, log_hashs = [], []
+        for text in texts:
+            log_hash = self.get_log_hash(text)
+            if log_hash in self.hash_files:
+                with open(os.path.join(self.log_dir, log_hash), 'r') as f_log:
+                    logs.append(json.load(f_log))
+                    log_hashs.append(log_hash)
+            else:
+                logs.append({'type': type_logs, 'text': text, 'self': dict(), 'asked': dict()})
+                log_hashs.append(log_hash)
+        return logs, log_hashs
+
+
+    def serialize_logs(self,
+                       logs: List[dict],
+                       hashes: List[str]
+    ):
+        for log, hash in zip(logs, hashes):
+            with open(os.path.join(self.log_dir, hash), 'w') as outfile:
+                json.dump(log, outfile)
+
+
+    def texts2logs(self,
+                   texts: List[str],
+                   type_logs: str
+    ):
+
+        # Preprocessing
+        if type_logs == 'src' and self.src_preproc_pipe is not None:
+            texts = [self.src_preproc_pipe(source) for source in texts]
+
+        logs, logs_hashes = self.load_logs(texts, type_logs)
+        # Selecting the answers
+        self.compute_answer_selection(logs, type_logs)
+        #  Generating the questions
+        self.compute_question_generation(logs, type_logs)
+        # Asking the questions on itself (Round trip consistency)
+        if self.do_consistency:
+            self.compute_question_answering(logs, logs, type_logs, type_logs)
+        # Weighter
+        if type_logs == 'src' and self.do_weighter:
+            self.compute_weighter(logs, type_logs='src')
+
+        return logs, logs_hashes
+
+
+    def compute_answer_selection(self,
+                                 logs: List[str],
+                                 type_logs: str
+    ):
+
+        for answer_type in self.get_answer_types(type_logs):
+            to_do_exs, to_do_exs_idxs = [], []
+            for idx, log in enumerate(logs):
+                if answer_type not in log['self']:
+                    log['self'][answer_type] = dict()
+                    to_do_exs.append(log['text'])
+                    to_do_exs_idxs.append(idx)
+
+
+            if len(to_do_exs) != 0:
+                list_answers = self.predict_self_answers(to_do_exs, answer_type)
+                for i in range(len(list_answers)):
+                    logs[to_do_exs_idxs[i]]['self'][answer_type]['answers'] = list_answers[i]
+
+
+
+    def compute_question_generation(self,
+                                    logs: list,
+                                    type_logs: str
+    ):
+
+        name_qg_model = "temp" # todo
+
+        to_do_exs, to_do_exs_idxs, to_do_exs_types = [], [], []
+        for idx, log in enumerate(logs):
+            for answer_type in self.get_answer_types(type_logs):
+                if name_qg_model not in log['self'][answer_type]:
+                    log['self'][answer_type][name_qg_model] = {'questions':[]}
+
+                    to_do_exs += [(a, log['text']) for a in log['self'][answer_type]['answers']]
+                    to_do_exs_idxs += [idx] * len(log['self'][answer_type]['answers'])
+                    to_do_exs_types += [answer_type] * len(log['self'][answer_type]['answers'])
+
+        if len(to_do_exs) != 0:
+            question_texts = self.predict_questions(to_do_exs, type_logs)
+            for i in range(len(question_texts)):
+
+                idx = to_do_exs_idxs[i]
+                answer_type = to_do_exs_types[i]
+                question = question_texts[i]
+                logs[idx]['self'][answer_type][name_qg_model]['questions'].append(question)
+
+
+    def compute_question_answering(self,
+                                   logs_1: dict,
+                                   logs_2: dict,
+                                   type_logs_1: str,
+                                   type_logs_2: str
+    ):
+        """
+        asking questions from logs_2 on text from logs_1
+        """
+        assert len(logs_1) == len(logs_2)
+
+        name_model_QG = 'temp' # todo
+        name_model_QA = 'temp' # todo
+
+        to_do_exs, to_do_exs_types, to_do_exs_idxs, to_do_gold_asws = [], [], [], []
+        for idx, (log_1, log_2) in enumerate(zip(logs_1, logs_2)):
+            for answer_type in self.get_answer_types(type_logs_2):
+                questions = log_2['self'][answer_type][name_model_QG]['questions']
+                gold_answers = log_2['self'][answer_type]['answers']
+                assert len(questions) == len(gold_answers)
+                for question, gold_answer in zip(questions, gold_answers):
+                    if question not in log_1['asked']:
+                        log_1['asked'][question] = dict()
+
+                    if name_model_QA not in log_1['asked'][question]:
+                        to_do_exs += [(question, log_1['text'])]
+                        to_do_exs_idxs += [idx]
+                        to_do_gold_asws += [gold_answer]
+
+                    # if already in the logs, we need to add the gold_answers if it hasnt been yet
+                    elif gold_answer not in log_1['asked'][question][name_model_QA]['ground_truth']:
+                          log_1['asked'][question][name_model_QA]['ground_truth'][gold_answer] = {}
+
+        if len(to_do_exs) != 0:
+            qa_scores, qa_texts = self.predict_answers(to_do_exs, type_logs_1)
+
+            answerability_scores = [1 - qa_score[0] for qa_score in qa_scores[self.keep_score_idx]] # todo qa_score[0] ?
+
+            assert len(to_do_exs) == len(qa_texts) == len(to_do_gold_asws) == len(answerability_scores)
+            for i in range(len(to_do_exs)):
+
+                question = to_do_exs[i][0]
+                idx = to_do_exs_idxs[i]
+                assert to_do_exs[i][1] == logs_1[idx]['text']
+
+                if name_model_QA not in logs_1[idx]['asked'][question]:
+                    logs_1[idx]['asked'][question][name_model_QA] = {'answer': qa_texts[i],
+                                                                     'answerability': answerability_scores[i],
+                                                                     'ground_truth': dict()
+                                                                     }
+                logs_1[idx]['asked'][question][name_model_QA]['ground_truth'][to_do_gold_asws[i]] = {}
+
+
+    def compute_answer_similarity_scores(self,
+                                         logs: dict,
+    ):
+        """
+        filling the similarity scores
+        """
+
+        name_model_QA = 'temp'  # todo
+
+        for type_score in self.list_scores:
+
+            # no need for comparison for answerabiliy, it is calculated directly in compute_question_answering
+            if type_score == 'answerability':
+                continue
+
+            to_do_exs_idxs, to_do_questions, to_do_pred_asws, to_do_gold_asws = [], [], [], []
+            for idx, log in enumerate(logs):
+                for question in log['asked']:
+                    d_answer = log['asked'][question][name_model_QA]
+                    for gold_answer in d_answer['ground_truth']:
+
+                        if type_score not in d_answer['ground_truth'][gold_answer]:
+
+                            to_do_exs_idxs += [idx]
+                            to_do_questions += [question]
+                            to_do_pred_asws += [d_answer['answer']]
+                            to_do_gold_asws += [gold_answer]
+
+            if len(to_do_exs_idxs) != 0:
+                if type_score == 'f1':
+                    sim_scores = [calculate_f1_squad(pred_asw, gold_asw) for pred_asw, gold_asw in zip(to_do_pred_asws, to_do_gold_asws)]
+                elif type_score == 'bertscore':
+                    sim_scores = calculate_BERTScore(to_do_pred_asws, to_do_gold_asws, self.metric_BERTScore, device=self.device)
+                else:
+                    raise NotImplementedError(f"{type_score} not implemented")
+
+                assert len(to_do_exs_idxs) == len(sim_scores)
+                for i in range(len(to_do_exs_idxs)):
+                    idx = to_do_exs_idxs[i]
+                    q = to_do_questions[i]
+                    a = to_do_gold_asws[i]
+                    logs[idx]['asked'][q][name_model_QA]['ground_truth'][a][type_score] = sim_scores[i]
+
+
+    def compute_weighter(self,
+                         logs: dict,
+                         type_logs:str
+    ):
+        """
+        weighting the probability that a question is asking about important content or not (see https://arxiv.org/abs/2103.12693)
+        """
+
+        name_model_weighter = 'temp' # todo
+        name_model_QG = 'temp'
+
+        to_do_exs, to_do_exs_types, to_do_exs_idxs, to_do_gold_asws = [], [], [], []
+        for idx, log in enumerate(logs):
+            for answer_type in self.get_answer_types(type_logs):
+                if name_model_weighter not in log['self'][answer_type][name_model_QG]:
+                    log['self'][answer_type][name_model_QG][name_model_weighter] = []
+
+                    questions = log['self'][answer_type][name_model_QG]['questions']
+                    answers = log['self'][answer_type]['answers']
+                    assert len(questions) == len(answers)
+                    to_do_exs += [f"{asw} {self.sep} {question} {self.sep} {log['text']}"
+                                  for asw, question in zip(answers, questions)]
+
+                    to_do_exs_idxs += [idx] * len(answers)
+                    to_do_exs_types += [answer_type] * len(answers)
+
+        if len(to_do_exs) != 0:
+            weighter_scores = self.predict_weighter(to_do_exs)
+            assert len(to_do_exs) == len(weighter_scores)
+            for i in range(len(to_do_exs)):
+                idx = to_do_exs_idxs[i]
+                answer_type = to_do_exs_types[i]
+                logs[idx]['self'][answer_type][name_model_QG][name_model_weighter].append(weighter_scores[i])
+
+
+    def get_answer_types(self,
+                         type_logs: str
+    ) -> str:
+        return 'TABLE' if type_logs == 'src' and self.task == 'data2text' else self.answer_types
+
+
+    def predict_self_answers(self,
+                             texts: list,
+                             answer_type: str
+    ) -> List[str]:
+
+        if self.limit_sent is not None:
+            list_sentences = [sentencize(text, self.spacy_pipeline) for text in texts]
+            texts = [' '.join(sentences[:self.limit_sent]) for sentences in list_sentences]
+
+        if answer_type == 'NER':
+            list_answers = [[a.text for a in self.spacy_pipeline(text).ents] for text in texts]
+        elif answer_type == 'NOUN':
+            list_answers = [[a.text for a in self.spacy_pipeline(text).noun_chunks] for text in texts]
+        elif answer_type == 'SPANER':
+            pass  # todo not implemented
+        elif answer_type == 'TABLE':
+            list_answers = [extract_table_answers(text) for text in texts]
+        return list_answers
+
+
+    def predict_questions(self,
+                          to_do_exs: List[tuple],
+                          type_logs: str
+    ) -> List[str]:
+
+        model_QG = self.models[type_logs]['QG']
+
+        str_prefix = f'{self.qg_prefix} {self.sep} ' if self.qg_prefix is not None else ''
+        formated_inputs = [f'{str_prefix}{asw} {self.sep} {context}' for asw, context in to_do_exs]
+        question_probs, question_texts = model_QG.predict(formated_inputs, beam_size=1)
+        return question_texts
+
+
+    def predict_answers(self,
+                        to_do_exs: List[tuple],
+                        type_logs: str
+    ):
+
+        model_QA = self.models[type_logs]['QA']
+        formated_inputs = [f'{question} {self.sep} {context}' for question, context in to_do_exs]
+        qa_scores, qa_texts = model_QA.predict(formated_inputs)
+        return qa_scores, qa_texts
+
+
+    def predict_weighter(self,
+                         to_do_exs
+    ) -> List[float]:
+        # Neutral Policy
+        if self.models['Weighter'] is None:
+            return [1.0 for _ in to_do_exs]
+        else:
+            probs, texts = self.models['Weighter'].predict(to_do_exs)
+            if len(to_do_exs) == 1:
+                probs['max'] = [probs['max']]
+
+            # when used as a classifier, only the first token prob is enough to evaluate the probability.
+            probs = [prob[0] if text == "true" else 1 - prob[0]
+                                for text, prob in zip(texts, probs['max'])]
+            probs = [prob.item() for prob in probs]
+            assert len(probs) == len(to_do_exs)
+            return probs
+
+
+    def calculate_score_from_logs(self,
+                                  hyp_log:List[dict],
+                                  compared_logs:List[List[dict]]
+    ) -> float:
+        scores = []
+        for compared_log in compared_logs:
+            hyp_score = self.base_score(hyp_log, compared_log)
+            compared_score = self.base_score(compared_log, hyp_log)
+            scores.append(np.average([hyp_score, compared_score]))
+        return self.reduction_multi_refs(scores)
+
+
+    def base_score(self,
+                   questioned_log: dict,
+                   compared_log: dict
+    ) -> float:
+
+        regularizer = lambda list_score, list_reg: np.multiply(scores, list_reg).tolist()
+        list_borned = lambda a_list: [max(min(1, x), 0) for x in a_list]
+
+        name_model_qg = 'temp' # todo
+        name_model_weighter = 'temp' # todo
+
+        if self.do_consistency:
+            consistencies = self.get_scores(compared_log, compared_log, 'f1')
+
+        if self.do_weighter and questioned_log['type'] == 'src':
+            weighter_probs = [w for answer_type in self.get_answer_types(compared_log['type'])
+                              for w in questioned_log['self'][answer_type][name_model_qg][name_model_weighter]
+            ]
+
+        list_scores = []
+        for type_score in self.list_scores:
+            scores = self.get_scores(questioned_log, compared_log, type_score)
+
+            # if no questions, return a score set to 0; could be improved though ?
+            if len(scores) == 0:
+                return 0
+
+            # sometimes the answers scores return a value ~1.000000X which is superior to 1
+            scores = list_borned(scores)
+
+            if self.do_consistency:
+                assert consistencies is not None, "consistencies is None. Please compute the score with ques_consists activate."
+                scores = regularizer(scores, consistencies)
+
+            if self.do_weighter:
+                assert weighter_probs is not None, "weighter_probs is None. Please compute the weighter probs with do_weighter activate."
+                scores = regularizer(scores, weighter_probs)
+
+            list_scores += scores
+
+        final_score = np.average(list_scores)
+        assert 0 <= final_score <= 1, "score should be in [0-1] "
+        return final_score
+
+
+    def get_scores(self,
+                   questioned_log: List[dict],
+                   compared_log: List[dict],
+                   type_score: str
+    ) -> List[float]:
+
+        name_model_qa = 'temp'
+        name_model_qg = 'temp'
+
+        asked_questions = [q for answer_type in self.get_answer_types(compared_log['type'])
+                           for q in compared_log['self'][answer_type][name_model_qg]['questions']
+                           ]
+
+        if type_score == 'answerability':
+            scores =  [questioned_log['asked'][q][name_model_qa]['answerability']
+                       for q in asked_questions]
+
+        else: # F1 or BERTScore
+            asked_answers = [a for answer_type in self.get_answer_types(compared_log['type'])
+                             for a in compared_log['self'][answer_type]['answers']]
+
+            assert len(asked_answers) == len(asked_questions)
+
+            try:
+                [questioned_log['asked'][q][name_model_qa]['ground_truth'][a][type_score]
+                 for q, a in zip(asked_questions, asked_answers)]
+            except:
+                t=0
+            scores = [questioned_log['asked'][q][name_model_qa]['ground_truth'][a][type_score]
+                      for q, a in zip(asked_questions, asked_answers)]
+
+        return scores
+
+
+    def load_all_models(self
+    ):
+        # Textual hypothesis
+        models = {"hyp":{}}
+        if self.language == 'en':
+            models['hyp']['QA'] = f"models/QA_en_T5"
+            models['hyp']['QG'] = f"models/QG_en_T5"
+        else:
+            models['hyp']['QA'] = f"models/QA_multilingual_question_in_english_minilm"
+            models['hyp']['QG'] = f"models/QG_multilingual_question_in_english_minilm"
+
+        # (if) multimodal sources
+        if self.task == "data2text":
+            models['src'] = dict()
+            models['src']['QA'] = f"models/QA_webnlg_T5"
+            models['src']['QG'] = f"models/QG_webnlg_T5"
+
+        # Loading all the different models
+        for modality in models.keys():
+            for task in models[modality].keys():
+                if not type(models[modality][task]) == str:
+                    continue
+                models[modality][task] = self.generic_load_model(models[modality][task], is_task_QG=task=='QG')
+
+        # Loading the weighter
+        models['Weighter'] = None
+        if self.do_weighter:
+            models['Weighter'] = self.generic_load_model(f"models/Weighter_en_T5", is_task_QG=False)
+
+        # Linking already loaded models for the other keys
+        for k in ["src", "ref"]:
+            if models.get(k) == None:
+                models[k] = dict()
+                models[k]['QA'] = models['hyp']['QA']
+                models[k]['QG'] = models['hyp']['QG']
+
+        return models
+
+
+    def generic_load_model(self,
+                           path_model: str,
+                           is_task_QG: bool=False
+    ):
         # Download the model
         if not os.path.exists(os.path.join(DIR, path_model)):
             if not os.path.exists(os.path.join(DIR, 'models/')):
@@ -125,412 +685,155 @@ class QuestEval:
         path_model = os.path.join(DIR, path_model)
         assert not ('t5' in path_model.lower() and ('unilm' in path_model.lower() or 'minilm' in path_model.lower()))
         if 't5' in path_model.lower():
-            load_model = load_t2t_model
+            type_model = 't5'
         elif 'unilm' in path_model.lower() or 'minilm' in path_model.lower():
-            load_model = load_t2t_uni_model
+            type_model = 'unilm'
         else:
-            raise ('Model Name Not Handled.')
+            raise NotImplementedError(f'Model Name Not Handled: the path should contain t5, unilm or minilm ({path_model}).')
 
+        top_p, keep_score_idx = None, None
         if is_task_QG == "QG":
-            model = load_model(path_model, self.device, model_batch_size=self.qg_batch_size)
-            model.top_p = self.QG_top_p
-            if self.language == "en":
-                # the default models were trained with this prefix 'sv1' and 'nqa' prefix on the two datasets
-                self.qg_prefix = 'sv1'
+            model_batch_size = self.qg_batch_size
+            top_p = self.QG_top_p
         else:
             # 73 / 220 are for the unanswerable token in T5 / minilm vocabulary
-            if 't5' in path_model.lower():
-                self.keep_score_idx = 73
-            elif 'minilm' in path_model.lower() or 'unilm' in path_model.lower():
-                self.keep_score_idx = 220
-            model = load_model(path_model, self.device, keep_score_idx=[self.keep_score_idx], model_batch_size=self.clf_batch_size)
+            if type_model == 't5': self.keep_score_idx = 73 # todo move that to init wrt PAD changes
+            elif type_model == 'unilm': self.keep_score_idx = 220
+            keep_score_idx = [self.keep_score_idx]
+            model_batch_size = self.clf_batch_size
+
+        model = self.get_model(path_model=path_model,
+                               model_batch_size=model_batch_size,
+                               device=self.device,
+                               type_model=type_model,
+                               top_p=self.QG_top_p,
+                               keep_score_idx=keep_score_idx)
+
+        if is_task_QG and self.language == "en":
+            # the default models were trained with this prefix 'sv1' and 'nqa' prefix on the two datasets
+            self.qg_prefix = 'sv1' # todo remove that
 
         return model
 
-    def load_all_models(self):
-        models = {"hyp":{}}
-        if self.language == 'en':
-            models['hyp']['QA'] = f"models/QA_en_T5"
-            models['hyp']['QG'] = f"models/QG_en_T5"
+
+    def get_model(self,
+                  path_model: str,
+                  model_batch_size: str,
+                  device: str ='cuda',
+                  type_model: str = 't5',
+                  keep_score_idx: List[int] = [],
+                  top_p: float = None
+    ):
+        if type_model == 't5':
+            load_model = load_t2t_model
+        elif type_model == 'unilm':
+            load_model = load_t2t_uni_model
+
+        model = load_model(path_model, device, keep_score_idx, model_batch_size, top_p)
+
+        return model
+
+
+    def set_model(self,
+                  key: str,
+                  task: str,
+                  path_model: str,
+                  model_batch_size: int = 32,
+                  device: str = 'cuda',
+                  type_model: str = 't5',
+                  keep_score_idx: List[int] = [],
+                  top_p: float = None
+    ):
+
+        assert key in [None, 'hyp', 'src', 'ref']
+        assert task in ['weighter', 'QG', 'QG']
+
+        model = self.get_model(path_model, model_batch_size, device, type_model, keep_score_idx, top_p)
+
+        if key is None:
+            self.models[task] = model
         else:
-            models['hyp']['QA'] = f"models/QA_multilingual_question_in_english_minilm"
-            models['hyp']['QG'] = f"models/QG_multilingual_question_in_english_minilm"
+            self.models[task][key] = model
 
-        if self.task == "E2E":
-            models['src'] = dict()
-            models['src']['QA'] = f"models/QA_E2E_T5"
-            models['src']['QG'] = f"models/QG_E2E_T5"
 
-        if self.task == "webnlg":
-            models['src'] = dict()
-            models['src']['QA'] = f"models/QA_webnlg_T5"
-            models['src']['QG'] = f"models/QG_webnlg_T5"
+    def get_answer_hash(self
+    ) -> str:
+        self.spacy_pipeline
+        msg = f"LimitSent={self.limit_sent}_models={'_'.join(self.answer_types)}"
+        return msg
 
-        for modality in models.keys():
-            for task in models[modality].keys():
 
-                if not type(models[modality][task]) == str:
-                    continue
-                models[modality][task] = self.generic_load_model(models[modality][task], is_task_QG=task=='QG')
+    def get_qg_hash(self,
+                    type_log: str
+    ) -> str:
+        model = self.models[type_log]['QG']
+        msg = f'QG_{type_log}_hash={model.__hash__()}_top_p={model.top_p}'
+        return msg
 
-        models['Weighter'] = None
+
+    def get_qa_hash(self,
+                    type_log: str
+    ) -> str:
+        model = self.models[type_log]['QA']
+        msg = f'QA_{type_log}_hash={model.__hash__()}'
+        return msg
+
+
+    def get_weighter_hash(self
+    ) -> str:
+        msg = None
         if self.do_weighter:
-            models['Weighter'] = self.generic_load_model(f"models/Weighter_en_T5", is_task_QG=False)
+            model = self.models['Weighter']
+            msg = f'W_hash={model.__hash__()}'
+        return msg
 
-        # linking already loaded models for other keys
-        for k in ["src", "ref"]:
-            if models.get(k) == None:
-                models[k] = dict()
-                models[k]['QA'] = models['hyp']['QA']
-                models[k]['QG'] = models['hyp']['QG']
 
-        return models
+    def __hash__(self
+    ) -> str:
+        msg = f"QuestEval_version={_version_}" \
+              f"_task={self.task}_lang={self.language}_preproc={self.src_preproc_pipe}" \
+              f"_consist={self.do_consistency}_scores={self.list_scores}" \
+              f"_weighter={self.get_weighter_hash()}" \
+              f"_{self.get_qa_hash('hyp')}_{self.get_qa_hash('ref')}__{self.get_qa_hash('src')}" \
+              f"_{self.get_qg_hash('hyp')}_{self.get_qg_hash('ref')}__{self.get_qg_hash('src')}"
 
-    def compute_all_cached(self, summaries: str, articles: str, source_filename: str) -> float:
-        # Reading or writing mode, depending on cached file existence
-        if os.path.exists(os.path.join(DIR, f"models/{self.task}_{self.language}/cached_{source_filename}.jsonl")):
-            self.cache_mode = "r"
-        else:
-            self.cache_mode = "w"
+        return msg
 
-        scores = []
-        for i, (summary, article) in enumerate(zip(summaries, articles)):
-            self.cache_index = i
-            pre_answ_scores, pre_f1_scores, pre_ques_consists = self.compute_precision_scores(summary, article)
-            rec_answ_scores, rec_f1_scores, rec_ques_consists, rec_weight_ws = self.compute_recall_scores(summary, article, source_filename)
 
-            scores.append(
-                self.compute_safeval_score(
-                    (pre_answ_scores, pre_f1_scores, pre_ques_consists),
-                    (rec_answ_scores, rec_f1_scores, rec_ques_consists, rec_weight_ws)
-                )
-            )
 
-            # Writing line by line
-            if self.cache_mode == "w":
-                with open(os.path.join(DIR, f"models/{self.task}_{self.language}/cached_{source_filename}.jsonl"), "a") as cache:
-                    cache.write(f"{json.dumps(self.cached_questions_article)}\n")
 
-        self.cache_index = None
-        self.cached_questions_article = None
-        self.cache_mode = None
-
-        return np.mean(scores).item()
-
-    def compute_all(self, hypothesis: str, source: str = None, reference: str = None) -> dict:
-
-        assert source != None or reference != None, "you need to provide at least the source or the reference"
-        assert source != '', "the source should not be an empty string"
-        assert reference != '', "the reference should not be an empty string"
-        if hypothesis == '':
-            return {'scores': {'fscore': 0 , 'precision': 0, 'recall': 0}}
-
-        # Preprocessing
-        if self.src_preproc_pipe is not None:
-            if source is not None:
-                source = self.src_preproc_pipe(source)
-
-        keys = []
-        if source:
-            keys += ['src_hyp', 'hyp_src']
-        if reference:
-            keys += ['ref_hyp', 'hyp_ref']
-            if self.do_regularize:
-                keys += ['src_ref', 'ref_src']
-
-        d_results = {'logs':{}, 'scores':{}}
-        for key in keys:
-            if key == 'src_hyp':
-                inp_1, inp_2 = source, hypothesis
-            elif key == 'hyp_src':
-                inp_1, inp_2 = hypothesis, source
-            elif key == 'ref_hyp':
-                inp_1, inp_2 = reference, hypothesis
-            elif key == 'hyp_ref':
-                inp_1, inp_2 = hypothesis, reference
-            elif key == 'src_ref':
-                inp_1, inp_2 = source, reference
-            elif key == 'ref_src':
-                inp_1, inp_2 = reference, source
-
-            d_results['logs'][key] = self.compute_scores(inp_1, inp_2, key=key)
-
-            weighter_probs = None
-            if key == 'src_hyp' and self.models['Weighter'] is not None:
-                weighter_probs = self.compute_weighter(d_results['logs'][key]['questions'],
-                                                       d_results['logs'][key]['answers'],
-                                                       d_results['logs'][key]['sent_idxs'],
-                                                       source)
-
-            d_results['logs'][key]['weighter_probs'] = weighter_probs
-
-
-        precision, recall, fscore = self.flat_score(d_results['logs'])
-        d_results['scores']['fscore'] = fscore
-        d_results['scores']['precision'] = precision
-        d_results['scores']['recall'] = recall
-
-        return d_results
-
-    def compute_weighter(self, questions, asws, sents_idxs, source_doc):
-
-        #Neutral Policy
-        if self.models['Weighter'] is None:
-            result_clf_probs = [1 for _ in questions]
-        else:
-            clf_inputs = [f'{idx} {self.sep} {asw} {self.sep} {question} {self.sep} {source_doc}' for idx, asw, question in zip(sents_idxs, asws, questions)]
-            clf_probs, clf_texts = self.models['Weighter'].predict(clf_inputs)
-
-            if len(clf_inputs) == 1:
-                clf_probs['max'] = [clf_probs['max']]
-
-            # when used as a classifier, only the first token prob is enough to evaluate the probability.
-            result_clf_probs = [clf_prob[0] if clf_text == "true" else 1 - clf_prob[0]
-                                for clf_text, clf_prob in zip(clf_texts, clf_probs['max'])]
-
-        assert len(result_clf_probs) == len(questions)
-        return result_clf_probs
-
-    def compute_scores(self, text_qg, text_qa, key):
-
-        key_1, key_2 = key.split('_')
-
-        model_QG = self.models[key_1]['QG']
-        questions, asws, sents_idxs = self.generate_relevant_question(text_qg, model_QG, key_1)
-
-        model_QA = self.models[key_2]['QA']
-        answerability_scores, f1_scores, bert_scores = self.compute_qa_scores(text_qa, questions, asws, model_QA)
-
-        question_consistencies = None
-        if self.do_consistency:
-            model_QA_consistency = self.models[key_1]['QA']
-            question_consistencies = self.filter_questions(text_qg, questions, asws, model_QA_consistency)
-
-        logs = dict()
-        logs.update({
-            'text_qg': text_qg,
-            'text_qa': text_qa,
-            'questions': questions,
-            'answers': asws,
-            'sent_idxs': sents_idxs,
-            'question_consistencies': question_consistencies,
-            'answerability_scores': answerability_scores,
-            'f1_scores': f1_scores,
-            'bert_scores': bert_scores
-        })
-
-        return logs
-
-    def base_score(self, answ_scores, f1_scores, bert_scores, ques_consists, weighter_probs=None):
-
-        def regularizer(f1_scores, answ_scores, bert_scores, list_reg):
-
-            assert len(f1_scores) == len(list_reg)
-
-            f1_scores = np.multiply(f1_scores, list_reg).tolist()
-            answ_scores = np.multiply(answ_scores, list_reg).tolist()
-            if bert_scores is not None:
-                bert_scores = np.multiply(bert_scores, list_reg).tolist()
-
-            return f1_scores, answ_scores, bert_scores
-
-        score, penalty = 0, 0
-
-        if len(f1_scores) > 0:
-
-            # sometimes the answers scores return a value ~1.000000X which is superior to 1
-            list_borned = lambda a_list: [max(min(1, x), 0) for x in a_list]
-            f1_scores = list_borned(f1_scores)
-            answ_scores = list_borned(answ_scores)
-            if self.do_BERTScore:
-                assert bert_scores is not None, 'bert_scores is None while do_BERTScore is activated'
-                bert_scores = list_borned(bert_scores)
-
-            if self.do_consistency:
-                assert ques_consists is not None, "ques_consists is None. Please compute the score with ques_consists activate."
-                f1_scores, answ_scores, bert_scores = regularizer(f1_scores, answ_scores, bert_scores, ques_consists)
-
-            if self.do_weighter and weighter_probs != None:
-                f1_scores, answ_scores, bert_scores = regularizer(f1_scores, answ_scores, bert_scores, weighter_probs)
-
-            scores = f1_scores + answ_scores
-            if self.do_BERTScore:
-                assert bert_scores is not None, 'BERTScore is None while do_BERTScore is activated'
-                scores += bert_scores
-
-            score = np.average(scores)
-            penalty = self.lambda_penalty * (1 - min(answ_scores))
-
-        assert 0 <= score <= 1, "score should be in [0-1] "
-        return score, penalty
-
-    def flat_score(self, d_logs):
-
-        rec_scores, rec_penalties, prec_scores, prec_penalties,ref_scores, ref_penalties = [], [], [], [], [], []
-        for key_name, key_dict in (d_logs.items()):
-
-            score, pen = self.base_score(key_dict['answerability_scores'],
-                                         key_dict['f1_scores'],
-                                         key_dict['bert_scores'],
-                                         key_dict['question_consistencies'],
-                                         key_dict['weighter_probs'])
-
-            if key_name in ['src_hyp', 'ref_hyp']:
-                rec_scores.append(score)
-                rec_penalties.append(pen)
-            elif key_name in ['hyp_src', 'hyp_ref']:
-                prec_scores.append(score)
-                prec_penalties.append(pen)
-            elif key_name in ['src_ref', 'ref_src']:
-                ref_scores.append(score)
-                ref_penalties.append(pen)
-
-        recall = np.average(rec_scores) + sum(rec_penalties)
-        precision = np.average(prec_scores) + sum(prec_penalties)
-        f_score = (recall + precision)/2
-
-        if self.do_regularize and len(ref_scores)>0:
-            ref_score = np.average(ref_scores) + sum(ref_penalties)
-            f_score = max(f_score / (ref_score + 1e-6), 1)  # clipping
-
-        return precision, recall, f_score
-
-    def generate_relevant_question(self, text, model_QG, key):
-
-        def predict_questions(batch_sents, batch_asws):
-            question_probs, question_texts = model_QG.predict(batch_sents, beam_size=self.qg_beam_size)
-            # extend wrt beam size:
-            batch_asws = [batch_asws[idx] for idx in range(len(batch_asws)) for _ in range(self.qg_beam_size)]
-            return question_texts, batch_asws
-
-        questions, answers, list_sents_idx = [], [], []
-        batch_sents, batch_asws = [], []
-        for i_sent, sent in enumerate(self.sentencize(text)):
-
-            if i_sent == self.limit_sent:
-                break
-
-            mode_asw = 'text'
-            if key == 'src' and self.task == "data2text":
-                mode_asw = 'data'
-            sent_asws = self.get_all_answers(sent, mode_asw=mode_asw)
-
-            for i_asw, asw in enumerate(sent_asws):
-                str_prefix = ''
-                if self.qg_prefix is not None:
-                    str_prefix = f'{self.qg_prefix} {self.sep} '
-                batch_sents.append(f'{str_prefix}{asw} {self.sep} {sent}')
-                batch_asws.append(asw)
-                list_sents_idx += [i_sent] * self.qg_beam_size
-                if len(batch_sents) == self.qg_batch_size:
-                    new_questions, new_answers = predict_questions(batch_sents, batch_asws)
-                    answers += new_answers
-                    questions += new_questions
-                    batch_sents, batch_asws = [], []
-
-        if len(batch_sents) > 0:
-            new_questions, new_answers = predict_questions(batch_sents, batch_asws)
-            answers += new_answers
-            questions += new_questions
-        if len(questions) == 0:
-            pass
-
-        assert (len(questions) == len(answers) and len(questions) == len(list_sents_idx))
-        return questions, answers, list_sents_idx
-
-    def get_all_answers(self, sent, mode_asw='text'):
-
-        sent_asws = []
-
-        if mode_asw=='text':
-            s = self.spacy_pipeline(sent)
-            if 'NER' in self.answer_types:
-                sent_asws += [a.text for a in s.ents]
-            if 'NOUN' in self.answer_types:
-                sent_asws += [a.text for a in s.noun_chunks]
-            if 'SPANER' in self.answer_types:
-                pass  # todo not implemented
-        elif mode_asw == 'data':
-
-            asw_toks = []
-            is_asw = False
-            for tok in sent.split():
-
-                if tok == ']':
-                    sent_asws.append(' '.join(asw_toks))
-                    is_asw = False
-                    asw_toks = []
-
-                if is_asw:
-                    asw_toks.append(tok)
-
-                if tok == '[':
-                    is_asw = True
-        else:
-            raise ('Situation not handle.')
-        return sent_asws
-
-    def filter_questions(self, text, questions, answers, model_QA):
-        qa_inputs = [f'{question} {self.sep} {text}' for question, asw in zip(questions, answers)]
-        qa_scores, qa_texts = model_QA.predict(qa_inputs)
-        f1_scores = [calculate_f1_squad(qa_text, asw) for qa_text, asw in zip(qa_texts, answers)]
-        assert len(questions) == len(f1_scores)
-        return f1_scores
-
-    def compute_qa_scores(self, questioned_text, questions, asws, model_QA):
-
-        qa_inputs = [f'{question} {self.sep} {questioned_text}' for question, asw in zip(questions, asws)]
-        qa_scores, qa_texts = model_QA.predict(qa_inputs)
-
-        answerability_scores = [1 - qa_score[0] for qa_score in qa_scores[self.keep_score_idx]]
-        f1_scores = [calculate_f1_squad(qa_text, asw) for qa_text, asw in zip(qa_texts, asws)]
-        bert_scores = self.calculate_BERTScore(qa_texts, asws)
-        return answerability_scores, f1_scores, bert_scores
-
-    def sentencize(self, text):
-        preprocessed_context = self.spacy_pipeline(text)
-        return [sentence_tuple[0] for sentence_tuple in split_on_punct(preprocessed_context)]
-
-    def calculate_BERTScore(self, model_predictions, gold_references):
-
-        if self.do_BERTScore == None:
-            return None
-
-        if len(model_predictions) == 0:
-            return []
-        self.metric_BERTScore.add_batch(predictions=model_predictions, references=gold_references)
-        final_score = self.metric_BERTScore.compute(model_type='bert-base-multilingual-cased', device=self.device)
-
-        # set all unanswerable scores to 0
-        for i, (pred) in enumerate(model_predictions):
-            if pred == "unanswerable":
-                final_score['f1'][i] = 0.0
-
-        return final_score['f1']
-
-
-
-
-def load_t2t_model(path_model, device, keep_score_idx=[], model_batch_size=48):
-    return APIQA(
+def load_t2t_model(path_model,
+                   device,
+                   keep_score_idx=[],
+                   model_batch_size=48,
+                   top_p = None
+):
+    model = APIQA(
         pretrained_model_name_or_path=path_model,
         max_source_length=512,
         model_batch_size=model_batch_size,
         keep_score_idx=keep_score_idx,
         device=device
     )
-
+    if top_p is not None:
+        model.top_p = top_p
+    return model
 
 def load_t2t_uni_model(
     path_model,
     device,
     keep_score_idx=[],
     model_batch_size=48,
+    top_p = None
 ):
     isCuda = device != 'cpu'
-    return T2tUniModel(
+    model = T2tUniModel(
         path_model,
         isCuda,
         keep_score_idx,
         model_batch_size,
     )
+    if top_p is not None:
+        model.top_p = top_p
+
+    return model

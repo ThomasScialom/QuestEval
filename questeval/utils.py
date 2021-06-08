@@ -338,24 +338,6 @@ class DataTrainingArguments:
     )
 
 
-def split_on_punct(doc):
-    """
-    From one spacy doc to a List of (sentence_text, (start, end))
-    """
-    start = 0
-    seen_period = False
-    start_idx = 0
-    for i, token in enumerate(doc):
-        if seen_period and not token.is_punct:
-            yield doc[start: token.i].text, (start_idx, token.idx)
-            start = token.i
-            start_idx = token.idx
-            seen_period = False
-        elif token.text in [".", "!", "?"]:
-            seen_period = True
-    if start < len(doc):
-        yield doc[start: len(doc)].text, (start_idx, len(doc.text))
-
 
 class CustomT5ForConditionalGeneration(T5ForConditionalGeneration):
     """
@@ -619,3 +601,62 @@ def calculate_f1_squad(a_gold: str, a_pred: str) -> float:
     recall = 1.0 * num_same / len(gold_toks)
     f1 = (2 * precision * recall) / (precision + recall)
     return f1
+
+def calculate_BERTScore(model_predictions, gold_references, metric_BERTScore, device):
+
+    if len(model_predictions) == 0:
+        return []
+
+    metric_BERTScore.add_batch(predictions=model_predictions, references=gold_references)
+    final_score = metric_BERTScore.compute(model_type='bert-base-multilingual-cased', device=device)
+
+    # set all unanswerable scores to 0
+    for i, (pred) in enumerate(model_predictions):
+        if pred == "unanswerable":
+            final_score['f1'][i] = 0.0
+
+    return [f1.item() for f1 in final_score['f1']]
+
+
+def extract_table_answers(text):
+    asws = []
+
+    asw_toks = []
+    is_asw = False
+    for tok in text.split():
+
+        if tok == ']':
+            asws.append(' '.join(asw_toks))
+            is_asw = False
+            asw_toks = []
+
+        if is_asw:
+            asw_toks.append(tok)
+
+        if tok == '[':
+            is_asw = True
+    return asws
+
+
+def split_on_punct(doc):
+    """
+    From one spacy doc to a List of (sentence_text, (start, end))
+    """
+    start = 0
+    seen_period = False
+    start_idx = 0
+    for i, token in enumerate(doc):
+        if seen_period and not token.is_punct:
+            yield doc[start: token.i].text, (start_idx, token.idx)
+            start = token.i
+            start_idx = token.idx
+            seen_period = False
+        elif token.text in [".", "!", "?"]:
+            seen_period = True
+    if start < len(doc):
+        yield doc[start: len(doc)].text, (start_idx, len(doc.text))
+
+
+def sentencize(text, spacy_pipeline) -> List:
+    preprocessed_context = spacy_pipeline(text)
+    return [sentence_tuple[0] for sentence_tuple in split_on_punct(preprocessed_context)]
