@@ -34,7 +34,8 @@ class QuestEval:
         clf_batch_size: int = 48,
         limit_sent: int = 5,
         reduction_multi_refs: Callable = max,
-        isCuda: bool = True
+        isCuda: bool = True,
+        force_compute_logs = False
     ) -> None:
         """
         Main class for the QuestEval metric
@@ -85,6 +86,7 @@ class QuestEval:
 
         self.log_dir = os.path.join(DIR, 'logs')
         self.hash_files = set(os.listdir(self.log_dir))
+        self.force_compute_logs = force_compute_logs
 
         self.task = task
         self.language = language
@@ -105,7 +107,8 @@ class QuestEval:
         if 'bertscore' in self.list_scores:
             self.metric_BERTScore = load_metric("bertscore")
 
-        self.models = self.load_all_models()
+        if language == 'en':
+            self.spacy_pipeline = spacy.load('en_core_web_sm')
 
         if self.src_preproc_pipe == None:
             if task == 'data2text':
@@ -115,14 +118,11 @@ class QuestEval:
                 we handle by default the preprocessing of the table for webnlg given the GEM format (https://gem-benchmark.com/)
                 if your tables are in an other format, please pass a custom function for src_preproc_pipe
                 """
-                from questeval.data2text_objects.data_formating import linearize_webnlg_input
-                self.src_preproc_pipe = linearize_webnlg_input
+                from questeval.utils import LinearizeWebnlgInput
+                self.src_preproc_pipe = LinearizeWebnlgInput(spacy_pipeline=self.spacy_pipeline)
 
-        if language == 'en':
-            self.spacy_pipeline = spacy.load('en_core_web_sm')
-
-        else:
-            pass
+        logging.info("Loading the models, it can take times to download the first time.")
+        self.models = self.load_all_models()
 
 
     def corpus_questeval(
@@ -230,7 +230,7 @@ class QuestEval:
         logs, log_hashs = [], []
         for text in texts:
             log_hash = self.text2hash(text)
-            if log_hash in self.hash_files:
+            if log_hash in self.hash_files and not self.force_compute_logs:
                 with open(os.path.join(self.log_dir, log_hash), 'r') as f_log:
                     logs.append(json.load(f_log))
                     log_hashs.append(log_hash)

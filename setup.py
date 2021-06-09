@@ -1,45 +1,36 @@
-import os
-from setuptools import find_packages, setup
+from setuptools import setup, find_packages
 
-# Package meta-data.
-NAME = 'questeval'
+PACKAGE_NAME = 'questeval'
+VERSION = "0.2.0"
 DESCRIPTION = "State-of-the-art metric for Natural Language Generation"
+KEYWORDS = "NLP NLG Metric Evaluation Summarization Simplification Image Captioning Data2text Question Answering Generation Multilingual deep learning Transformer Pytorch"
 URL = 'https://github.com/recitalAI/QuestEval'
 EMAIL = 't.scialom@gmail.com'
 AUTHOR = 'Thomas Scialom, Paul-Alexis Dray'
+LICENSE = 'MIT'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = "0.2.0"
+EXTRAS = {}
 
-REQUIRED = [
-    'en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0.tar.gz',
-    'xx_ent_wiki_sm @ https://github.com/explosion/spacy-models/releases/download/xx_ent_wiki_sm-3.0.0/xx_ent_wiki_sm-3.0.0.tar.gz',
-]
+with open("README.md", "r", encoding="utf-8") as f:
+    long_description = f.read()
 
-EXTRAS = {
-}
+with open("requirements.txt", "r") as f:
+    requirements = [line.strip() for line in f.readlines()]
 
-here = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = '\n' + f.read()
-
-# Installing a part of the repo
-os.system("pip install -e unilm/s2s-ft")
-
-# Where the magic happens:
 setup(
-    name=NAME,
+    name=PACKAGE_NAME,
     version=VERSION,
     description=DESCRIPTION,
     long_description=long_description,
     long_description_content_type='text/markdown',
-    keywords="NLP NLG Metric Evaluation Summarization Simplification Image Captioning Data2text Question Answering Generation Multilingual deep learning Transformer Pytorch ",
-    license='MIT',
+    keywords=KEYWORDS,
+    license=LICENSE,
     author=AUTHOR,
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_packages(exclude=["examples"]),
-    install_requires=REQUIRED,
+    packages=find_packages(include=f"{PACKAGE_NAME}.*"),
+    install_requires=requirements,
     extras_require=EXTRAS,
     include_package_data=True,
     classifiers=[
