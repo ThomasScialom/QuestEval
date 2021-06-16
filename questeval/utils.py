@@ -4,11 +4,46 @@ import re
 import unidecode
 import collections
 import torch
+import hashlib
 
 from transformers import (
     T5ForConditionalGeneration,
     T5Tokenizer,
 )
+
+
+def text2hash(string: str) -> str:
+    hash_object = hashlib.sha512(string.encode('utf-8'))
+    hex_dig = hash_object.hexdigest()
+
+    return hex_dig
+
+
+def split_on_punct(doc):
+    """
+    From one spacy doc to a List of (sentence_text, (start, end))
+    """
+    start = 0
+    seen_period = False
+    start_idx = 0
+    for i, token in enumerate(doc):
+        if seen_period and not token.is_punct:
+            yield doc[start: token.i].text, (start_idx, token.idx)
+            start = token.i
+            start_idx = token.idx
+            seen_period = False
+        elif token.text in [".", "!", "?"]:
+            seen_period = True
+    if start < len(doc):
+        yield doc[start: len(doc)].text, (start_idx, len(doc.text))
+
+
+def sentencize(
+    text: str, spacy_pipeline
+) -> List:
+    preprocessed_context = spacy_pipeline(text)
+    return [sentence_tuple[0] for sentence_tuple in split_on_punct(preprocessed_context)]
+
 
 class API_T2T:
     def __init__(
@@ -34,7 +69,6 @@ class API_T2T:
             self.model.cuda()
         self.max_source_length = max_source_length
         self.model_batch_size = model_batch_size
-
 
     def predict(
         self,
@@ -75,7 +109,11 @@ class API_T2T:
                 )
 
                 gen_texts += gen_text
-                keep_score_idx_scores += (1 - dict_generated_ids['scores'][0].softmax(-1)[:, self.keep_score_idx]).squeeze().tolist()
+
+                keep_score_idx_score = (1 - dict_generated_ids['scores'][0].softmax(-1)[:, self.keep_score_idx])
+                if len(gen_text) != 1:
+                    keep_score_idx_score = keep_score_idx_score.squeeze()
+                keep_score_idx_scores += keep_score_idx_score.tolist()
 
         # Note: self.model.additional_scores_idx keep in memory probs only if beam == 1;
         #   it is usefull only when T5 is used as a classifier so far.
@@ -146,35 +184,6 @@ def calculate_BERTScore(
     return [f1 for f1 in final_score['f1']]
 
 
-def split_on_punct(
-    doc
-):
-    """
-    From one spacy doc to a List of (sentence_text, (start, end))
-    """
-    start = 0
-    seen_period = False
-    start_idx = 0
-    for i, token in enumerate(doc):
-        if seen_period and not token.is_punct:
-            yield doc[start: token.i].text, (start_idx, token.idx)
-            start = token.i
-            start_idx = token.idx
-            seen_period = False
-        elif token.text in [".", "!", "?"]:
-            seen_period = True
-    if start < len(doc):
-        yield doc[start: len(doc)].text, (start_idx, len(doc.text))
-
-
-def sentencize(
-    text: str,
-    spacy_pipeline
-) -> List:
-    preprocessed_context = spacy_pipeline(text)
-    return [sentence_tuple[0] for sentence_tuple in split_on_punct(preprocessed_context)]
-
-
 def extract_table_answers(
     text: str
 ) -> List[str]:
@@ -207,7 +216,6 @@ class WrongE2EFormat(
             For E2E, please give a Meaning Representation as a string, 
             formatted as below:
                 input = 'name[The Eagle], eatType[coffee shop], food[Japanese]'
-
             Your object was: {}
         """
         super().__init__(err.format(obj))
@@ -222,7 +230,6 @@ def linearize_e2e_input(
     Input must be a string, in standard E2E format.
     Example:
         'name[The Eagle], eatType[coffee shop], food[Japanese]'
-
     lowercase=True indicates that you want all tokens to be lowercased.
     """
     if format != 'gem':
@@ -255,7 +262,6 @@ class LinearizeWebnlgInput():
                 "(15788)_1993_SB | discoverer | Donal_O'Ceallaigh",
                 "(15788)_1993_SB | epoch | 2006-03-06"
             ]
-
         lowercase=True indicates that you want all strings to be lowercased.
         """
 
@@ -268,8 +274,8 @@ class LinearizeWebnlgInput():
         input: List[str]
     )-> str:
 
-        if format != 'gem':
-            raise ValueError(f'Unsupported format for now: {format}')
+        if self.format != 'gem':
+            raise ValueError(f'Unsupported format for now: {self.format}')
 
         if not isinstance(input, list):
             raise WrongWebNlgFormat(input)
@@ -356,6 +362,7 @@ class Triple:
         s = re.sub('\(.*\)', '', s)
         return s.strip()
 
+
 class WrongWebNlgFormat(Exception):
     def __init__(self, obj):
         err = """
@@ -367,8 +374,6 @@ class WrongWebNlgFormat(Exception):
                     "(15788)_1993_SB | discoverer | Donal_O'Ceallaigh",
                     "(15788)_1993_SB | epoch | 2006-03-06"
                 ]
-
             Your object was: {}
         """
         super().__init__(err.format(obj))
-

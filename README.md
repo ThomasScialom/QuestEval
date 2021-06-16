@@ -22,7 +22,7 @@ Planned extensions:
 
 ## 1/ Installing QuestEval
 ```
-$ conda create --name questeval python=3.7
+$ conda create --name questeval python=3.9
 $ conda activate questeval
 ```
 **WARNING**: You need to install, before any package, correct version of [pytorch](https://pytorch.org/get-started/locally/#start-locally) linked to your cuda version.
