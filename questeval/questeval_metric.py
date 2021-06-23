@@ -207,7 +207,6 @@ class QuestEval:
 
         # Source
         if sources is not None:
-            modified_logs = False
             src_logs, src_hashes, modified_logs = self._texts2logs(sources, type_logs='src', d_loaded_logs=d_loaded_logs)
             # Asking the questions on the compared text
             modified_logs = max(self._compute_question_answering(src_logs, hyp_logs, 'src', 'hyp'), modified_logs)
@@ -217,6 +216,7 @@ class QuestEval:
             # Serialise logs
             if modified_logs:
                 self._serialize_logs(src_logs, src_hashes)
+                self._serialize_logs(hyp_logs, hyp_hashes)
             list_compared_logs.append(src_logs)
 
         # Reference
@@ -225,7 +225,6 @@ class QuestEval:
             assert min(len_refs) == max(len_refs), \
                 "The number of references used to compute the score among the example should  be consistant."
             for i_ref in range(len_refs[0]):
-                modified_logs = False
                 references = [refs[i_ref] for refs in list_references]
                 ref_logs, ref_hashes, modified_logs = self._texts2logs(references, type_logs='ref', d_loaded_logs=d_loaded_logs)
                 # Asking the questions on the compared text
@@ -236,6 +235,7 @@ class QuestEval:
                 # Serialise logs
                 if modified_logs:
                     self._serialize_logs(ref_logs, ref_hashes)
+                    self._serialize_logs(hyp_logs, hyp_hashes)
                 list_compared_logs.append(ref_logs)
 
         # Compute the similarity scores for hyp
@@ -297,6 +297,8 @@ class QuestEval:
             log_hash = text2hash(text)
             if log_hash not in d_loaded_logs:
                 log = {'type': type_logs, 'text': text, 'self': dict(), 'asked': dict()}
+                if not (self.use_cache and log_hash in self.hash_files and text != ""):
+                    temp=1
                 if self.use_cache and log_hash in self.hash_files and text != "":
                     cached_path = os.path.join(self.log_dir, log_hash)
                     try:
