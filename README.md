@@ -13,12 +13,7 @@ It is the result from an (on-going) international collaboration, and so far it t
 
 
 Planned extensions: 
-- Machine Translation
-- Multi-references option
-- Computational optimisation (batch on multiple examples, generated questions caching)
-- Hyperparameters hashcode for results reproducibility
-- Migration to the last Hugging Face Transformers 
-- Ability to use your own models
+- Multilingual Evaluation
 
 ## 1/ Installing QuestEval
 ```
@@ -35,76 +30,104 @@ $ conda activate questeval
 (questeval) $ pip install -e .
 ```
 
-The pre-trained QA/QG models will be automatically downloaded. Alternatively, you can use your own models.
-
 ## 2/ Using QuestEval 
 
-The default task is *text2text* and the default language is *en*. It allows to measure the content similarity between any English texts:
-
-```
-``from questeval.questeval_metric import QuestEval
-
-source = """After wildfires consumed an entire town, students and teachers who had planned for remote classes found some comfort in staying connected amid the chaos."""
-hypothesis = """Ash fell from an apocalyptic orange sky as Jennifer Willin drove home last week from the only school in tiny Berry Creek, Calif., where she had picked up a pair of Wi-Fi hot spots for her daughters’ remote classes. Hours later, her cellphone erupted with an emergency alert: Evacuate immediately. By the next morning, what one official described as a “massive wall of fire” had swept through the entire Northern California town of about 1,200 people, killing nine residents, including a 16-year-old boy, and destroying the school and almost every home and business. Ms. Willin and her family escaped to a cramped hotel room 60 miles away. In her panic, she had forgotten to grab masks, but she had the hot spots, along with her daughters’ laptops and school books. On Monday, the two girls plan to meet with their teachers on Zoom, seeking some comfort amid the chaos. They’re still able to be in school,” Ms. Willin said, “even though the school burned to the ground.” As the worst wildfire season in decades scorches the West amid a still raging pandemic, families and educators who were already starting the strangest and most challenging school year of their lifetimes have been traumatized all over again. Tens of thousands of people have been forced to flee their homes, with some mourning the loss of their entire communities. But amid the twin disasters, the remote learning preparations that schools made for the coronavirus are providing a strange modicum of stability for teachers and students, letting many stay connected and take comfort in an unexpected form of virtual community."""
-
-questeval = QuestEval()
-score = questeval.compute_all(hypothesis, source)
-print(score['scores'])``
-```
-Output:
-```
-{fscore': 0.2883088133952934, 
-'precision': 0.5038477301470266, 
-'recall': 0.07276989664356022}
-```
-
-Yes, it works without any references, but if the reference is available, you can also add it:
-```
-reference = """After wildfires consumed the town, students who had planned for remote classes found some comfort in staying connected amid the chaos."""
-score = questeval.compute_all(hypothesis, source, reference)
-print(score['scores'])
-```
-Output:
-```
-{'fscore': 0.4750318370987159, 
-'precision': 0.5820995386296233, 
-'recall': 0.36796413556780855}
-```
-Note that the score is always between 0 and 1.
-
-Alternatively, you can compute the score by comparing the evaluated text only to the reference: 
-```
-score = questeval.compute_all(hypothesis, None, reference)
-print(score['scores'])
-```
-Output:
-```
-{'fscore': 0.6617548608021384, 
-'precision': 0.66035134711222, 
-'recall': 0.6631583744920568}
-```
-This means that **QuestEval can be used to evaluate any NLG task where references are available**.
+The default task is *text2text* and the default language is *en*. It allows to measure the content similarity between any two English texts. This means that **QuestEval can be used to evaluate any NLG task where references are available**. Alternatively, we can compare the hyothesis to the source as detailed bellow.  
 For tasks specificities, see below. 
 
-In addition, you can access all the logs including the generated questions and predicted answers. For instance, the generated questions on the source that were asked on the hypothesis are available via `score['logs']['src_hyp']['questions']`.
-
-***[coming soon]*** We also provide more examples in the Jupyter notebook *example/Examples.ipynb*. The notebook also contains all the code to reproduce the results in the paper *QuestEval: Summarization Asks for Fact-based Evaluation*.
-
-To run the notebook in your environment:
+Here is a an example. Note that the code can take times since it requires generating and answering a set of questions. However, if you let the parameter *use_cache* to its default value, running the same example again will be very fast this time.
 
 ```
-(questeval) $ conda install jupyter
-(questeval) $ python -m ipykernel install --user --name=questeval
-(questeval) $ pip install matplotlib
-(questeval) $ pip install ipywidgets
+from questeval.questeval_metric import QuestEval
+questeval = QuestEval(isCuda=False)
+
+source_1 = "Since 2000, the recipient of the Kate Greenaway medal has also been presented with the Colin Mears award to the value of 35000."
+prediction_1 = "Since 2000, the winner of the Kate Greenaway medal has also been given to the Colin Mears award of the Kate Greenaway medal."
+references_1 = ["Since 2000, the recipient of the Kate Greenaway Medal will also receive the Colin Mears Awad which worth 5000 pounds",
+              "Since 2000, the recipient of the Kate Greenaway Medal has also been given the Colin Mears Award."
+]
+
+source_2 = "He is also a member of another Jungiery boyband 183 Club."
+prediction_2 = "He also has another Jungiery Boyband 183 club."
+references_2 = ["He's also a member of another Jungiery boyband, 183 Club.", 
+              "He belonged to the Jungiery boyband 183 Club."
+]
+
+score = questeval.corpus_questeval(
+    hypothesis=[prediction_1, prediction_2], 
+    sources=[source_1, source_2],
+    list_references=[references_1, references_2]
+)
+
+print(score)
 ```
+Output:
+```
+{'corpus_score': 0.5384088815651453,
+ 'ex_level_scores': [0.39472648643312, 0.6820912766971705]}
+```
+
+In the output, you have access to the *corpus_score* which corresponds to the average of each example score stored in *ex_level_scores*. Note that the score is always between 0 and 1.
+
+
+### Reference-less mode
+
+Yes, QuestEval can score a text without any references:
+
+```
+score = questeval.corpus_questeval(
+    hypothesis=[prediction_1, prediction_2], 
+    sources=[source_1, source_2]
+)
+
+print(score)
+```
+Output:
+```
+{'corpus_score': 0.4808210444513452,
+ 'ex_level_scores': [0.3889805345308213, 0.572661554371869]}
+```
+
+### Logs
+
+You can have access to the logs containing all the information about the generated questions or the question answering outputs:
+```
+log = questeval.open_log_from_text(source_1)
+```
+For instance, to print the questions asked on *source_1*: 
+```
+print(log['asked'].keys())
+```
+Output:
+```
+dict_keys(['Since 2000, the winner of the Kate Greenaway medal has also been given to the Colin Me', 'What medal has been given to the winner of the Colin Mears award?', 'What has been given to the Colin Mears award since 2000?', 'What has been given to the winner of the Colin Mears award since 2000?', 'What has been given to the winner of the Kate Greenaway medal since 2000?'])
+```
+
+### Hash 
+
+For reproducibility purpose, we defined a Hash that contains exhaustive information such as the QuestEval version, as well as the name of the models used and the type of scores:
+
+```
+questeval.__hash__()
+```
+Output:
+```
+"QuestEval_version=0.2.0_task=text2text_lang=en_preproc=None_consist=False_scores=('answerability', 'bertscore', 'f1')W_hash=None_hyp_QA_hash=ThomasNLG/t5-qa_squad2neg-en_ref_QA_hash=ThomasNLG/t5-qa_squad2neg-en_src_QA_hash=ThomasNLG/t5-qa_squad2neg-en_hyp_QG_hash=ThomasNLG/t5-qg_squad1-en_ref_QG_hash=ThomasNLG/t5-qg_squad1-en_src_QG_hash=ThomasNLG/t5-qg_squad1-en"
+```
+
+### Setting your own models
+
+The pre-trained QA/QG models will be automatically downloaded from Hugging Face. Alternatively, you can use your own models and change them dynamically with the *set_model* method that takes as input a path or a model_name. If the model_name corresponds to a model online on the Hugging Face hub, it will be downloaded automatically.
+Note that the models only have a predict function, therefore you can also customize it easily to fit the predict format.
 
 ## 3/ Tasks specificities
 
 ### Summarization
 The project is a collaboration work between [LIP6 Lab](https://mlia.lip6.fr/), [New York University](https://wp.nyu.edu/ml2/) and [ReciTAL Research](https://recital.ai/en/research-development/).
 
-QuestEval also handles summarization specificities: we developped a Weighter that selects only the questions asking about the important facts that are worth to be summarized. Read more in the original [paper](https://arxiv.org/abs/2103.12693). To activate this Weighter `do_weighter=True` when loading the metric.
+QuestEval also handles summarization specificities: we developped a Weighter that selects only the questions asking about the important facts that are worth to be summarized. Read more in the original [paper](https://arxiv.org/abs/2103.12693). To activate this Weighter `do_weighter=True` when loading the metric. This parameter will be activate by default if the *task* set is *summarization*. 
+
+**Warning:** the code has been modified since the paper and the Weighter input format is not correct anymore. We plan to provide a new Weighter. In the meantime, if you plan to use it we recommend to use the previous [version](https://github.com/recitalAI/QuestEval/releases/tag/v0.1.1).
 
 Paper: [QuestEval: Summarization Asks for Fact-based Evaluation](https://arxiv.org/abs/2103.12693)
 
@@ -120,7 +143,9 @@ How to cite:
 
 ### Text Simplification
 
-For Text Simplification, we recommend to activate the BERTScore for computing the similarity between two answers `do_BERTScore=True` when loading the metric. It ranks better the systems than BLEU or SARI metrics as reported in the paper.
+For Text Simplification, we recommend to the default setup with the text2text task. 
+
+It has been shown to perform better than BLEU, BERTScore or SARI metrics as reported in the paper.
 
 Paper: [Rethinking Automatic Evaluation in Sentence Simplification](https://arxiv.org/abs/2104.07560)
 
@@ -135,7 +160,7 @@ How to cite:
 ```
 ### Data2text
 
-We propose by default trained QA/QG models dealing with table inputs (e.g. E2E or Webnlg, see more in coming very soon). To load QuestEval for data2text tasks, specify *task=e2e* or *task=webnlg*. Note that you need a specific processing to linearised the tables. By default we handle the [GEM](https://gem-benchmark.com/) format for these two datasets. If you need an other preprocessing of the table, you can pass your custom function to Questeval: *src_preproc_pipe=custom_formating*.
+We propose by default trained QA/QG models dealing with table inputs (e.g. E2E or Webnlg). To load QuestEval for data2text tasks, specify *task=data2text*. Note that you need a specific processing to linearised the tables. By default we handle the [GEM](https://gem-benchmark.com/) format. If you need an other preprocessing of the table, you can pass your custom function to Questeval: *src_preproc_pipe=custom_formating*.
 
 Paper link: [Data-QuestEval: A Referenceless Metric for Data to Text Semantic Evaluation](https://arxiv.org/abs/2104.07555)
 
@@ -155,6 +180,6 @@ How to cite:
 
 ### Multilingual Evaluation
 
-QuestEval supports non english evaluation: the parameter `language` can be set to `multi` to tackle non-English texts. For Question Generation and Answering we used the [m-Minilm model](https://github.com/microsoft/unilm/tree/master/minilm). For the answer selection, spacy does not support multilingual *noun chuncking*. For this reason, QuestEval can be less effective than its English version: **we are working on that!**
+*[Coming Soon]*
 
 
