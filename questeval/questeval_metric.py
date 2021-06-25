@@ -703,7 +703,7 @@ class QuestEval:
             if "qa" in model_name.lower():
                 # 73 is the index for the unanswerable token in T5 vocabulary
                 keep_score_idx = 73
-            if "t5-qg_squad1-en" == model_name:
+            if f"{HF_ORGANIZATION}/t5-qg_squad1-en" == model_name:
                 # the default models were trained with this prefix 'sv1' and 'nqa' prefix on the two datasets
                 self.qg_prefix = 'sv1'
 
