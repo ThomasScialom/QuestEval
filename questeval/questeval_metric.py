@@ -165,6 +165,9 @@ class QuestEval:
         list_references: List[List[str]] = None,
         batch_size: int = 512
     ) -> Dict:
+
+        assert hypothesis is not None
+
         having_sources = (
             sources is not None
             and all([isinstance(s, str) for s in sources])  # Only str allowed
