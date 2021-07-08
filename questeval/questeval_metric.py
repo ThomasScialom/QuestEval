@@ -1,8 +1,6 @@
 from typing import List, Tuple, Dict, Callable
 import os
 import json
-import urllib
-import zipfile
 import numpy as np
 import logging
 from datasets import load_metric
@@ -34,8 +32,8 @@ class QuestEval:
         clf_batch_size: int = 48,
         limit_sent: int = 5,
         reduction_multi_refs: Callable = max,
-        isCuda: bool = True,
-        use_cache = True
+        no_cuda: bool = False,
+        use_cache: bool = True
     ) -> None:
         """
         Main class for the QuestEval metric
@@ -98,7 +96,7 @@ class QuestEval:
         self.qg_prefix = None
         self.qg_batch_size = qg_batch_size
         self.clf_batch_size = clf_batch_size
-        self.device = 'cuda' if (torch.cuda.is_available() and isCuda) else 'cpu'
+        self.device = 'cuda' if (torch.cuda.is_available() and not no_cuda) else 'cpu'
 
         self.reduction_multi_refs = reduction_multi_refs
         self.do_consistency = do_consistency
@@ -128,16 +126,16 @@ class QuestEval:
         # Textual hypothesis
         models = {"hyp": {}}
         if self.language == 'en':
-            models['hyp']['QA'] = 'ThomasNLG/t5-qa_squad2neg-en'
-            models['hyp']['QG'] = 'ThomasNLG/t5-qg_squad1-en'
+            models['hyp']['QA'] = f'{HF_ORGANIZATION}/t5-qa_squad2neg-en'
+            models['hyp']['QG'] = f'{HF_ORGANIZATION}/t5-qg_squad1-en'
         else:
             raise("Multilingual evaluation not handled yet.")
 
         # (if) multimodal sources
         if self.task == "data2text":
             models['src'] = dict()
-            models['src']['QA'] = 'ThomasNLG/t5-qa_webnlg_synth-en'
-            models['src']['QG'] = 'ThomasNLG/t5-qg_webnlg_synth-en'
+            models['src']['QA'] = f'{HF_ORGANIZATION}/t5-qa_webnlg_synth-en'
+            models['src']['QG'] = f'{HF_ORGANIZATION}/t5-qg_webnlg_synth-en'
 
         # Loading all the different models
         for modality in models.keys():
@@ -149,7 +147,7 @@ class QuestEval:
         # Loading the weighter
         models['Weighter'] = None
         if self.do_weighter:
-            models['Weighter'] = self.get_model(model_name='t5-weighter_cnndm-en')
+            models['Weighter'] = self.get_model(model_name=f'{HF_ORGANIZATION}/t5-weighter_cnndm-en')
 
         # Linking already loaded models for the other keys
         for k in ["src", "ref"]:
@@ -167,19 +165,29 @@ class QuestEval:
         list_references: List[List[str]] = None,
         batch_size: int = 512
     ) -> Dict:
-        assert sources is not None or list_references is not None, "You need to provide at least the sources or the references."
-        if list_references is not None:
+        having_sources = (
+            sources is not None
+            and all([isinstance(s, str) for s in sources])  # Only str allowed
+        )
+        having_references = (
+            list_references is not None
+            and all([isinstance(r, str) for rs in list_references for r in rs])  # Only str allowed
+            and len(set([len(rs) for rs in list_references])) == 1  # Same number of refs per ex
+        )
+
+        assert having_sources or having_references, "You need to provide at least correct sources or correct references."
+        if having_references:
             assert len(list_references) == len(hypothesis)
-        if sources is not None:
+        if having_sources:
             assert len(sources) == len(hypothesis)
 
         scores = []
         for ex_idx in range(0, len(hypothesis), batch_size):
             logging.info(f"Total examples: {len(hypothesis)}. Proceeding the examples {ex_idx}")
             batch_sources, batch_list_references = None, None
-            if sources is not None:
+            if having_sources:
                 batch_sources = sources[ex_idx:ex_idx + batch_size]
-            if list_references is not None:
+            if having_references:
                 batch_list_references = list_references[ex_idx:ex_idx + batch_size]
             scores += self._batch_questeval(
                 hypothesis=hypothesis[ex_idx:ex_idx + batch_size],
@@ -593,13 +601,6 @@ class QuestEval:
 
         else:
             probs, texts = self.models['Weighter'].predict(to_do_exs)
-            if len(to_do_exs) == 1:
-                probs['max'] = [probs['max']]
-
-            # when used as a classifier, only the first token prob is enough to evaluate the probability.
-            probs = [prob[0] if text == "true" else 1 - prob[0]
-                     for text, prob in zip(texts, probs['max'])]
-            probs = [prob.item() for prob in probs]
             assert len(probs) == len(to_do_exs)
 
         return probs
@@ -632,12 +633,12 @@ class QuestEval:
         if self.do_consistency:
             consistencies = self._get_scores(compared_log, compared_log, 'f1')
 
-        if self.do_weighter and questioned_log['type'] == 'src':
-            name_model_qg = self._get_qg_hash(questioned_log['type'])
+        if self.do_weighter and compared_log['type'] == 'src':
+            name_model_qg = self._get_qg_hash(compared_log['type'])
             name_model_weighter = self._get_weighter_hash()
             weighter_probs = [
-                w for answer_type in self._get_answer_types(compared_log['type'])
-                for w in questioned_log['self'][answer_type][name_model_qg][name_model_weighter]
+                w for answer_type in self._get_answer_types(questioned_log['type'])
+                for w in compared_log['self'][answer_type][name_model_qg][name_model_weighter]
             ]
 
         list_scores = []
@@ -655,7 +656,7 @@ class QuestEval:
                 assert consistencies is not None, "consistencies is None. Please compute the score with ques_consists activate."
                 scores = regularizer(scores, consistencies)
 
-            if self.do_weighter:
+            if self.do_weighter and compared_log['type'] == 'src':
                 assert weighter_probs is not None, "weighter_probs is None. Please compute the weighter probs with do_weighter activate."
                 scores = regularizer(scores, weighter_probs)
 
@@ -701,9 +702,12 @@ class QuestEval:
         if 't5' in model_name.lower():
 
             if "qa" in model_name.lower():
-                # 73 is the index for the unanswerable token in T5 vocabulary
+                # 73 is the index for the token unanswerable in T5 vocabulary
                 keep_score_idx = 73
-            if f"{HF_ORGANIZATION}/t5-qg_squad1-en" == model_name:
+            if 'weighter' in model_name.lower():
+                # 1176 is the index for the token true in T5 vocabulary
+                keep_score_idx = 1176
+            if model_name == f"{HF_ORGANIZATION}/t5-qg_squad1-en":
                 # the default models were trained with this prefix 'sv1' and 'nqa' prefix on the two datasets
                 self.qg_prefix = 'sv1'
 
