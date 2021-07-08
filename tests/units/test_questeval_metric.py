@@ -3,14 +3,11 @@ import pytest
 from questeval.questeval_metric import QuestEval
 from tests.utils.helpers import compute_questeval_score
 from tests.resources.constants import (
-    SRC_1, REF_1, HYP_1, RES_1,
-    SRC_2, REF_2, HYP_2, RES_2,
-    SRC_3, REF_3, HYP_3, RES_3,
+    SRC_empty, REF_empty, HYP_empty, RES_empty,
+    SRC_t2t, REF_t2t, HYP_t2t, RES_t2t,
+    SRC_D2T, REF_D2T, HYP_D2T, RES_D2T, SRC_D2T_wrong_format,
+    SRC_sum, REF_sum, HYP_sum, RES_sum,
     SRC_multi_1, REF_multi_1, HYP_multi_1, RES_multi_1,
-    SRC_sum_1, REF_sum_1, HYP_sum_1, RES_sum_1,
-    SRC_sum_2, REF_sum_2, HYP_sum_2, RES_sum_2,
-    SRC_D2T_1, REF_D2T_1, HYP_D2T_1, RES_D2T_1
-
 )
 
 def test_questeval_exceptions():
@@ -18,125 +15,64 @@ def test_questeval_exceptions():
     questeval = QuestEval()
 
     with pytest.raises(AssertionError) as loc_error:
-        compute_questeval_score(questeval, res=-1, HYP=None, SRC=None, REF=None)
+        compute_questeval_score(questeval, res=-1,HYPS=[""], SRCS=None, REFSS=None)
 
     with pytest.raises(AssertionError) as loc_error:
-        compute_questeval_score(questeval, res=-1,HYP="", SRC=None, REF=None)
-
-    with pytest.raises(AssertionError) as loc_error:
-        compute_questeval_score(questeval, res=-1,HYP="", SRC="", REF="")
-
-    with pytest.raises(AssertionError) as loc_error:
-        compute_questeval_score(questeval, res=-1,HYP="This is a test", SRC="Test", REF="")
-
+        compute_questeval_score(questeval, res=-1,HYPS=None, SRCS=[""], REFSS=None)
 
 def test_questeval_metric_text2text():
 
     questeval = QuestEval()
 
+    # empty strings
+    compute_questeval_score(questeval=questeval, res=RES_empty, HYPS=HYP_empty, SRCS=SRC_empty, REFSS=REF_empty)
+    compute_questeval_score(questeval=questeval, res=RES_empty, HYPS=HYP_empty, SRCS=None, REFSS=REF_empty)
+    compute_questeval_score(questeval=questeval, res=RES_empty, HYPS=HYP_empty, SRCS=SRC_empty, REFSS=None)
+
     # default example - source and reference
-    compute_questeval_score(questeval=questeval, res=RES_1['source_reference'], HYP=HYP_1, SRC=SRC_1, REF=REF_1)
-
+    compute_questeval_score(questeval=questeval, res=RES_t2t['source_reference'], HYPS=HYP_t2t, SRCS=SRC_t2t, REFSS=REF_t2t)
     # default example - source only
-    compute_questeval_score(questeval=questeval, res=RES_1['source'], HYP=HYP_1, SRC=SRC_1, REF=None)
-
+    compute_questeval_score(questeval=questeval, res=RES_t2t['source'], HYPS=HYP_t2t, SRCS=SRC_t2t, REFSS=None)
     # default example - reference only
-    compute_questeval_score(questeval=questeval, res=RES_1['reference'], HYP=HYP_1, SRC=None, REF=REF_1)
-
+    compute_questeval_score(questeval=questeval, res=RES_t2t['reference'], HYPS=HYP_t2t, SRCS=None, REFSS=REF_t2t)
     # default example - check that source and reference can be switched
-    compute_questeval_score(questeval=questeval, res=RES_1['source'], HYP=HYP_1, SRC=None, REF=SRC_1)
-
+    compute_questeval_score(questeval=questeval, res=RES_t2t['source'], HYPS=HYP_t2t, SRCS=None, REFSS=[[s] for s in SRC_t2t])
     # default example - check that source and reference are equally weighted
-    compute_questeval_score(questeval=questeval, res=RES_1['source'], HYP=HYP_1, SRC=SRC_1, REF=SRC_1)
+    compute_questeval_score(questeval=questeval, res=RES_t2t['source'], HYPS=HYP_t2t, SRCS=SRC_t2t, REFSS=[[s] for s in SRC_t2t])
 
-    # README example - source and reference
-    compute_questeval_score(questeval=questeval, res=RES_2['source_reference'], HYP=HYP_2, SRC=SRC_2, REF=REF_2)
+def test_questeval_metric_data2text():
 
-    # README example - source only
-    compute_questeval_score(questeval=questeval, res=RES_2['source'], HYP=HYP_2, SRC=SRC_2, REF=None)
+    questeval = QuestEval(task="data2text")
 
-    # README example - reference only
-    compute_questeval_score(questeval=questeval, res=RES_2['reference'], HYP=HYP_2, SRC=None, REF=REF_2)
+    # Checking the source linearization
+    from questeval.utils import WrongWebNlgFormat
+    with pytest.raises(WrongWebNlgFormat) as loc_error:
+        compute_questeval_score(questeval=questeval, res=RES_D2T['source_reference'], HYPS=HYP_D2T, SRCS=SRC_D2T_wrong_format, REFSS=REF_D2T)
 
-    # Long example - source and reference
-    compute_questeval_score(questeval=questeval, res=RES_3['source_reference'], HYP=HYP_3, SRC=SRC_3, REF=REF_3)
-
-    # Long example - source only
-    compute_questeval_score(questeval=questeval, res=RES_3['source'], HYP=HYP_3, SRC=SRC_3, REF=None)
-
-    # Long example - reference only
-    compute_questeval_score(questeval=questeval, res=RES_3['reference'], HYP=HYP_3, SRC=None, REF=REF_3)
-
-def test_questeval_metric_text2text_mutlilingual():
-
-    questeval = QuestEval(language='multi')
-
-    # French example - source and reference
-    compute_questeval_score(questeval=questeval, res=RES_multi_1['source_reference'], HYP=HYP_multi_1, SRC=SRC_multi_1, REF=REF_multi_1)
-
-    # French example - source only
-    compute_questeval_score(questeval=questeval, res=RES_multi_1['source'], HYP=HYP_multi_1, SRC=SRC_multi_1, REF=None)
-
-    # French example - reference only
-    compute_questeval_score(questeval=questeval, res=RES_multi_1['reference'], HYP=HYP_multi_1, SRC=None, REF=REF_multi_1)
+    # Data2text example - source and reference
+    compute_questeval_score(questeval=questeval, res=RES_D2T['source_reference'], HYPS=HYP_D2T, SRCS=SRC_D2T, REFSS=REF_D2T)
+    # Data2text example - source
+    compute_questeval_score(questeval=questeval, res=RES_D2T['source'], HYPS=HYP_D2T, SRCS=SRC_D2T, REFSS=None)
+    # Data2text example - reference
+    compute_questeval_score(questeval=questeval, res=RES_D2T['reference'], HYPS=HYP_D2T, SRCS=None, REFSS=REF_D2T)
 
 def test_questeval_metric_summarization():
 
     questeval = QuestEval(task="summarization", do_weighter=True)
 
-    # Summarization example 1 - source and reference
-    compute_questeval_score(questeval=questeval, res=RES_sum_1['source_reference_with_weighter'], HYP=HYP_sum_1, SRC=SRC_sum_1, REF=REF_sum_1)
-
-    # Summarization example 1 - source
-    compute_questeval_score(questeval=questeval, res=RES_sum_1['source_with_weighter'], HYP=HYP_sum_1, SRC=SRC_sum_1, REF=None)
-
-    # Summarization example 1 - reference
-    compute_questeval_score(questeval=questeval, res=RES_sum_1['reference'], HYP=HYP_sum_1, SRC=None, REF=REF_sum_1)
-
-    # Summarization example 2 - source and reference
-    compute_questeval_score(questeval=questeval, res=RES_sum_2['source_reference_with_weighter'], HYP=HYP_sum_2, SRC=SRC_sum_2, REF=REF_sum_2)
-
-    # Summarization example 2 - source
-    compute_questeval_score(questeval=questeval, res=RES_sum_2['source_with_weighter'], HYP=HYP_sum_2, SRC=SRC_sum_2, REF=None)
-
-    # Summarization example 2 - reference
-    compute_questeval_score(questeval=questeval, res=RES_sum_2['reference'], HYP=HYP_sum_2, SRC=None, REF=REF_sum_2)
+    # Summarization - source and reference
+    compute_questeval_score(questeval=questeval, res=RES_sum['source_reference'], HYPS=HYP_sum, SRCS=SRC_sum, REFSS=REF_sum)
+    # Summarization - source
+    compute_questeval_score(questeval=questeval, res=RES_sum['source'], HYPS=HYP_sum, SRCS=SRC_sum, REFSS=None)
+    # Summarization - reference
+    compute_questeval_score(questeval=questeval, res=RES_sum['reference'], HYPS=HYP_sum, SRCS=None, REFSS=REF_sum)
 
     # If we remove the weighter
+    assert questeval.do_weighter == True
     questeval.do_weighter = False
-
-    # Summarization example 1 - source and reference
-    compute_questeval_score(questeval=questeval, res=RES_sum_1['source_reference_no_weighter'], HYP=HYP_sum_1, SRC=SRC_sum_1, REF=REF_sum_1)
-
-    # Summarization example 1 - source
-    compute_questeval_score(questeval=questeval, res=RES_sum_1['source_no_weighter'], HYP=HYP_sum_1, SRC=SRC_sum_1, REF=None)
-
-    # Summarization example 1 - reference
-    compute_questeval_score(questeval=questeval, res=RES_sum_1['reference'], HYP=HYP_sum_1, SRC=None, REF=REF_sum_1)
-
-    # Summarization example 2 - source and reference
-    compute_questeval_score(questeval=questeval, res=RES_sum_2['source_reference_no_weighter'], HYP=HYP_sum_2, SRC=SRC_sum_2, REF=REF_sum_2)
-
-    # Summarization example 2 - source
-    compute_questeval_score(questeval=questeval, res=RES_sum_2['source_no_weighter'], HYP=HYP_sum_2, SRC=SRC_sum_2, REF=None)
-
-    # Summarization example 2 - reference
-    compute_questeval_score(questeval=questeval, res=RES_sum_2['reference'], HYP=HYP_sum_2, SRC=None, REF=REF_sum_2)
-
-
-def test_questeval_metric_data2text():
-
-    questeval = QuestEval(task="webnlg")
-
-    # Checking the source linearization
-    with pytest.raises(AssertionError) as loc_error:
-        compute_questeval_score(questeval=questeval, res=RES_D2T_1['source_reference'], HYP=HYP_D2T_1[0], SRC=SRC_D2T_1, REF=REF_D2T_1)
-
-    # Data2text example - source and reference
-    compute_questeval_score(questeval=questeval, res=RES_D2T_1['source_reference'], HYP=HYP_D2T_1, SRC=SRC_D2T_1, REF=REF_D2T_1)
-
-    # Data2text example - source
-    compute_questeval_score(questeval=questeval, res=RES_D2T_1['source'], HYP=HYP_D2T_1, SRC=SRC_D2T_1, REF=None)
-
-    # Data2text example - reference
-    compute_questeval_score(questeval=questeval, res=RES_D2T_1['reference'], HYP=HYP_D2T_1, SRC=None, REF=REF_D2T_1)
+    # Summarization - source and reference
+    compute_questeval_score(questeval=questeval, res=RES_sum['source_reference_without_weighter'], HYPS=HYP_sum, SRCS=SRC_sum, REFSS=REF_sum)
+    # Summarization - source
+    compute_questeval_score(questeval=questeval, res=RES_sum['source_without_weighter'], HYPS=HYP_sum, SRCS=SRC_sum, REFSS=None)
+    # Summarization - reference
+    compute_questeval_score(questeval=questeval, res=RES_sum['reference_without_weighter'], HYPS=HYP_sum, SRCS=None, REFSS=REF_sum)
