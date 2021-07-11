@@ -1,6 +1,6 @@
 # QuestEval
-![GitHub](https://img.shields.io/github/license/recitalAI/QuestEval)
-![PyPI](https://img.shields.io/pypi/v/questeval)
+![GitHub](https://img.shields.io/github/license/ThomasScialom/QuestEval)
+![release](https://img.shields.io/github/v/release/ThomasScialom/QuestEval)
  
 QuestEval is a **NLG metric** to assess if two different inputs contain the same information. The metric, based on Question Generation and Answering can deal with **multimodal** and **multilingual** inputs. 
 It is the result from an (on-going) international collaboration, and so far it tackles various tasks:
