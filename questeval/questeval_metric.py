@@ -106,7 +106,13 @@ class QuestEval:
             self.metric_BERTScore = load_metric("bertscore")
 
         if language == 'en':
-            self.spacy_pipeline = spacy.load('en_core_web_sm')
+            try:
+                self.spacy_pipeline = spacy.load('en_core_web_sm')
+            except OSError:
+                logging.warning("Downloading language model for the spaCy model.")
+                from spacy.cli import download
+                download('en_core_web_sm')
+                self.spacy_pipeline = spacy.load('en_core_web_sm')
 
         if self.src_preproc_pipe is None:
             if task == 'data2text':
