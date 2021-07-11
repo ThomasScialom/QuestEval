@@ -39,7 +39,7 @@ Here is an example. Note that the code can take time since it requires generatin
 
 ```
 from questeval.questeval_metric import QuestEval
-questeval = QuestEval(isCuda=False)
+questeval = QuestEval(no_cuda=True)
 
 source_1 = "Since 2000, the recipient of the Kate Greenaway medal has also been presented with the Colin Mears award to the value of 35000."
 prediction_1 = "Since 2000, the winner of the Kate Greenaway medal has also been given to the Colin Mears award of the Kate Greenaway medal."
@@ -112,7 +112,7 @@ questeval.__hash__()
 ```
 Output:
 ```
-"QuestEval_version=0.2.0_task=text2text_lang=en_preproc=None_consist=False_scores=('answerability', 'bertscore', 'f1')W_hash=None_hyp_QA_hash=ThomasNLG/t5-qa_squad2neg-en_ref_QA_hash=ThomasNLG/t5-qa_squad2neg-en_src_QA_hash=ThomasNLG/t5-qa_squad2neg-en_hyp_QG_hash=ThomasNLG/t5-qg_squad1-en_ref_QG_hash=ThomasNLG/t5-qg_squad1-en_src_QG_hash=ThomasNLG/t5-qg_squad1-en"
+"QuestEval_version=0.2.1_task=text2text_lang=en_preproc=None_consist=False_scores=('answerability', 'bertscore', 'f1')W_hash=None_hyp_QA_hash=ThomasNLG/t5-qa_squad2neg-en_ref_QA_hash=ThomasNLG/t5-qa_squad2neg-en_src_QA_hash=ThomasNLG/t5-qa_squad2neg-en_hyp_QG_hash=ThomasNLG/t5-qg_squad1-en_ref_QG_hash=ThomasNLG/t5-qg_squad1-en_src_QG_hash=ThomasNLG/t5-qg_squad1-en"
 ```
 
 ### Using your own models
