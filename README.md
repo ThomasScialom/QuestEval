@@ -43,14 +43,16 @@ questeval = QuestEval(no_cuda=True)
 
 source_1 = "Since 2000, the recipient of the Kate Greenaway medal has also been presented with the Colin Mears award to the value of 35000."
 prediction_1 = "Since 2000, the winner of the Kate Greenaway medal has also been given to the Colin Mears award of the Kate Greenaway medal."
-references_1 = ["Since 2000, the recipient of the Kate Greenaway Medal will also receive the Colin Mears Awad which worth 5000 pounds",
-              "Since 2000, the recipient of the Kate Greenaway Medal has also been given the Colin Mears Award."
+references_1 = [
+    "Since 2000, the recipient of the Kate Greenaway Medal will also receive the Colin Mears Awad which worth 5000 pounds",
+    "Since 2000, the recipient of the Kate Greenaway Medal has also been given the Colin Mears Award."
 ]
 
 source_2 = "He is also a member of another Jungiery boyband 183 Club."
 prediction_2 = "He also has another Jungiery Boyband 183 club."
-references_2 = ["He's also a member of another Jungiery boyband, 183 Club.", 
-              "He belonged to the Jungiery boyband 183 Club."
+references_2 = [
+    "He's also a member of another Jungiery boyband, 183 Club.", 
+    "He belonged to the Jungiery boyband 183 Club."
 ]
 
 score = questeval.corpus_questeval(
