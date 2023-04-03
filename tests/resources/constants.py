@@ -1,14 +1,14 @@
 # Basic tests
-HYP_empty = ['']
-SRC_empty = ['']
-REF_empty = [['']]
-RES_empty = {'corpus_score': 0, 'ex_level_scores': [0]}
+HYP_empty = [""]
+SRC_empty = [""]
+REF_empty = [[""]]
+RES_empty = {"corpus_score": 0, "ex_level_scores": [0]}
 
 # Text2text
 HYP_t2t = [
     """This is a hypothesis test""",
     """After wildfires consumed an entire town, students and teachers who had planned for remote classes found some comfort in staying connected amid the chaos.""",
-    """Linguistics is the scientific study of language."""
+    """Linguistics is the scientific study of language.""",
 ]
 SRC_t2t = [
     """This is a source test""",
@@ -17,13 +17,30 @@ SRC_t2t = [
 ]
 REF_t2t = [
     ["""This is a reference test"""],
-    ["""After wildfires consumed the town, students who had planned for remote classes found some comfort in staying connected amid the chaos."""],
-    ["""Historical linguistics is the study of language change, particularly with regards to a specific language or a group of languages. Western trends in historical linguistics date back to roughly the late 18th century, when the discipline grew out of philology[3] (the study of ancient texts and antique documents). Historical linguistics emerged as one of the first few sub-disciplines in the field, and was most widely practiced during the late 19th century.[4] Despite a shift in focus in the twentieth century towards formalism and generative grammar, which studies the universal properties of language, historical research today still remains a significant field of linguistic inquiry. Subfields of the discipline include language change and grammaticalisation."""]
+    [
+        """After wildfires consumed the town, students who had planned for remote classes found some comfort in staying connected amid the chaos."""
+    ],
+    [
+        """Historical linguistics is the study of language change, particularly with regards to a specific language or a group of languages. Western trends in historical linguistics date back to roughly the late 18th century, when the discipline grew out of philology[3] (the study of ancient texts and antique documents). Historical linguistics emerged as one of the first few sub-disciplines in the field, and was most widely practiced during the late 19th century.[4] Despite a shift in focus in the twentieth century towards formalism and generative grammar, which studies the universal properties of language, historical research today still remains a significant field of linguistic inquiry. Subfields of the discipline include language change and grammaticalisation."""
+    ],
 ]
 RES_t2t = {
-    'source_reference': {'corpus_score': 0.49102102670900777, 'ex_level_scores': [0.5165528853734335,0.6966693286621382,0.2598408660914517]},
-    'source': {'corpus_score': 0.29564413678731466, 'ex_level_scores': [0.250493844350179,0.3927641071854754,0.24367445882628946]},
-    'reference': {'corpus_score': 0.49102102742435577, 'ex_level_scores': [0.5165528853734335, 0.6966693300812963, 0.25984086681833757]}
+    "source_reference": {
+        "corpus_score": 0.49102102670900777,
+        "ex_level_scores": [0.5165528853734335, 0.6966693286621382, 0.2598408660914517],
+    },
+    "source": {
+        "corpus_score": 0.29564413678731466,
+        "ex_level_scores": [0.250493844350179, 0.3927641071854754, 0.24367445882628946],
+    },
+    "reference": {
+        "corpus_score": 0.49102102742435577,
+        "ex_level_scores": [
+            0.5165528853734335,
+            0.6966693300812963,
+            0.25984086681833757,
+        ],
+    },
 }
 
 # data2text
@@ -31,38 +48,76 @@ HYP_D2T = ["1950 da was discovered by carl."]
 SRC_D2T = [["(29075)_1950_da | discoverer | carl_a._wirtanen"]]
 REF_D2T = [["( 29075 ) 1950 da was discovered by carl a wirtanen ."]]
 RES_D2T = {
-    'source_reference': {'corpus_score': 0.5690725238786803, 'ex_level_scores': [0.5690725238786803]},
-    'source': {'corpus_score': 0.49123190829047453, 'ex_level_scores': [0.49123190829047453]},
-    'reference': {'corpus_score': 0.5690725238786803, 'ex_level_scores': [0.5690725238786803]}
+    "source_reference": {
+        "corpus_score": 0.5690725238786803,
+        "ex_level_scores": [0.5690725238786803],
+    },
+    "source": {
+        "corpus_score": 0.49123190829047453,
+        "ex_level_scores": [0.49123190829047453],
+    },
+    "reference": {
+        "corpus_score": 0.5690725238786803,
+        "ex_level_scores": [0.5690725238786803],
+    },
 }
-SRC_D2T_wrong_format = ["(29075)_1950_da | discoverer | carl_a._wirtanen"] # not a list of triplet
+SRC_D2T_wrong_format = [
+    "(29075)_1950_da | discoverer | carl_a._wirtanen"
+]  # not a list of triplet
 
 # Summarisation
 HYP_sum = [
     """The elderly woman suffered from diabetes and hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says .""",
-    """The elderly woman suffered from diabetes and hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""
+    """The elderly woman suffered from diabetes and hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says .""",
 ]
 SRC_sum = [
     """(CNN) -- An American woman died aboard a cruise ship that docked at Rio de Janeiro on Tuesday, the same ship on which 86 passengers previously fell ill, according to the state-run Brazilian news agency, Agencia Brasil. The American tourist died aboard the MS Veendam, owned by cruise operator Holland America. Federal Police told Agencia Brasil that forensic doctors were investigating her death. The ship's doctors told police that the woman was elderly and suffered from diabetes and hypertension, according the agency. The other passengers came down with diarrhea prior to her death during an earlier part of the trip, the ship's doctors said. The Veendam left New York 36 days ago for a South America tour.""",
     """(CNN) -- An American woman died aboard a cruise ship that docked at Rio de Janeiro on Tuesday, the same ship on which 86 passengers previously fell ill, according to the state-run Brazilian news agency, Agencia Brasil. The American tourist died aboard the MS Veendam, owned by cruise operator Holland America. Federal Police told Agencia Brasil that forensic doctors were investigating her death. The ship's doctors told police that the woman was elderly and suffered from diabetes and hypertension, according the agency. The other passengers came down with diarrhea prior to her death during an earlier part of the trip, the ship's doctors said. The Veendam left New York 36 days ago for a South America tour.""",
 ]
 REF_sum = [
-    ["""The elderly woman suffered from diabetes and hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""],
-    ["""The woman suffered from hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""],
+    [
+        """The elderly woman suffered from diabetes and hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""
+    ],
+    [
+        """The woman suffered from hypertension, ship's doctors say .\nPreviously, 86 passengers had fallen ill on the ship, Agencia Brasil says ."""
+    ],
 ]
 RES_sum = {
-    'source_reference': {'corpus_score': 0.757273530104646, 'ex_level_scores': [0.8672574662867888, 0.6472895939225032]},
-    'source': {'corpus_score': 0.4455642875603073, 'ex_level_scores': [0.4455642875603073, 0.4455642875603073]},
-    'reference': {'corpus_score': 0.757273530104646, 'ex_level_scores': [0.8672574662867888, 0.6472895939225032]},
-    'source_reference_without_weighter' : {'corpus_score': 0.757273530104646, 'ex_level_scores': [0.8672574662867888, 0.6472895939225032]},
-    'source_without_weighter' : {'corpus_score': 0.5745670140433459, 'ex_level_scores': [0.5745670140433459, 0.5745670140433459]},
-    'reference_without_weighter' : {'corpus_score': 0.757273530104646, 'ex_level_scores': [0.8672574662867888, 0.6472895939225032]}
+    "source_reference": {
+        "corpus_score": 0.757273530104646,
+        "ex_level_scores": [0.8672574662867888, 0.6472895939225032],
+    },
+    "source": {
+        "corpus_score": 0.4455642875603073,
+        "ex_level_scores": [0.4455642875603073, 0.4455642875603073],
+    },
+    "reference": {
+        "corpus_score": 0.757273530104646,
+        "ex_level_scores": [0.8672574662867888, 0.6472895939225032],
+    },
+    "source_reference_without_weighter": {
+        "corpus_score": 0.757273530104646,
+        "ex_level_scores": [0.8672574662867888, 0.6472895939225032],
+    },
+    "source_without_weighter": {
+        "corpus_score": 0.5745670140433459,
+        "ex_level_scores": [0.5745670140433459, 0.5745670140433459],
+    },
+    "reference_without_weighter": {
+        "corpus_score": 0.757273530104646,
+        "ex_level_scores": [0.8672574662867888, 0.6472895939225032],
+    },
 }
-
 
 
 # Multilingual
 HYP_multi_1 = ["""Le SCAF doit remplacer en 2040 leurs avions de combat Rafale."""]
-SRC_multi_1 = ["""La France, l’Allemagne et l’Espagne ont annoncé lundi avoir trouvé un accord pour lancer les contrats d’études du système de combat aérien futur (SCAF) , à l’issue d’âpres négociations et de rivalités industrielles. « Les discussions menées (…) au cours des derniers mois ont permis d’aboutir à un accord équilibré entre les différents partenaires pour la prochaine étape de la phase de démonstration du programme », affirment dans une déclaration commune la ministre des armées française, Florence Parly, et ses homologues allemande et espagnole, Annegret Kramp-Karrenbauer et Margarita Robles. Ces études, dites de « phase 1B », portent sur environ 3,5 milliards d’euros d’ici à 2024, et sont réparties et financées à parts égales entre les trois pays, selon le cabinet de la ministre française"""]
-REF_multi_1 = [["""Le système de combat aérien futur (SCAF) doit remplacer à l’horizon 2040 leurs avions de combat Rafale et Eurofighter."""]]
-RES_multi_1 = None # todo
+SRC_multi_1 = [
+    """La France, l’Allemagne et l’Espagne ont annoncé lundi avoir trouvé un accord pour lancer les contrats d’études du système de combat aérien futur (SCAF) , à l’issue d’âpres négociations et de rivalités industrielles. « Les discussions menées (…) au cours des derniers mois ont permis d’aboutir à un accord équilibré entre les différents partenaires pour la prochaine étape de la phase de démonstration du programme », affirment dans une déclaration commune la ministre des armées française, Florence Parly, et ses homologues allemande et espagnole, Annegret Kramp-Karrenbauer et Margarita Robles. Ces études, dites de « phase 1B », portent sur environ 3,5 milliards d’euros d’ici à 2024, et sont réparties et financées à parts égales entre les trois pays, selon le cabinet de la ministre française"""
+]
+REF_multi_1 = [
+    [
+        """Le système de combat aérien futur (SCAF) doit remplacer à l’horizon 2040 leurs avions de combat Rafale et Eurofighter."""
+    ]
+]
+RES_multi_1 = None  # todo

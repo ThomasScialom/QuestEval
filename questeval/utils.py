@@ -13,7 +13,7 @@ from transformers import (
 
 
 def text2hash(string: str) -> str:
-    hash_object = hashlib.sha512(string.encode('utf-8'))
+    hash_object = hashlib.sha512(string.encode("utf-8"))
     hex_dig = hash_object.hexdigest()
 
     return hex_dig
@@ -28,21 +28,21 @@ def split_on_punct(doc):
     start_idx = 0
     for i, token in enumerate(doc):
         if seen_period and not token.is_punct:
-            yield doc[start: token.i].text, (start_idx, token.idx)
+            yield doc[start : token.i].text, (start_idx, token.idx)
             start = token.i
             start_idx = token.idx
             seen_period = False
         elif token.text in [".", "!", "?"]:
             seen_period = True
     if start < len(doc):
-        yield doc[start: len(doc)].text, (start_idx, len(doc.text))
+        yield doc[start : len(doc)].text, (start_idx, len(doc.text))
 
 
-def sentencize(
-    text: str, spacy_pipeline
-) -> List:
+def sentencize(text: str, spacy_pipeline) -> List:
     preprocessed_context = spacy_pipeline(text)
-    return [sentence_tuple[0] for sentence_tuple in split_on_punct(preprocessed_context)]
+    return [
+        sentence_tuple[0] for sentence_tuple in split_on_punct(preprocessed_context)
+    ]
 
 
 class API_T2T:
@@ -52,7 +52,7 @@ class API_T2T:
         max_source_length: int,
         model_batch_size: int,
         keep_score_idx: int,  # Note: will work only if beamsize == 1
-        device: str = "cuda"
+        device: str = "cuda",
     ) -> None:
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
         self.tokenizer = T5Tokenizer.from_pretrained(
@@ -81,7 +81,7 @@ class API_T2T:
 
         for i in range(0, len(sources), self.model_batch_size):
             inputs = self.tokenizer(
-                sources[i: i+self.model_batch_size],
+                sources[i : i + self.model_batch_size],
                 max_length=self.max_source_length,
                 padding="max_length",
                 truncation=True,
@@ -100,17 +100,22 @@ class API_T2T:
                     num_return_sequences=1,
                     do_sample=False,
                     output_scores=True,
-                    return_dict_in_generate=True
+                    return_dict_in_generate=True,
                 )
                 gen_text = self.tokenizer.batch_decode(
-                    dict_generated_ids['sequences'],
+                    dict_generated_ids["sequences"],
                     skip_special_tokens=True,
-                    clean_up_tokenization_spaces=True
+                    clean_up_tokenization_spaces=True,
                 )
 
                 gen_texts += gen_text
 
-                keep_score_idx_score = (1 - dict_generated_ids['scores'][0].softmax(-1)[:, self.keep_score_idx])
+                keep_score_idx_score = (
+                    1
+                    - dict_generated_ids["scores"][0].softmax(-1)[
+                        :, self.keep_score_idx
+                    ]
+                )
                 if len(gen_text) != 1:
                     keep_score_idx_score = keep_score_idx_score.squeeze()
                 keep_score_idx_scores += keep_score_idx_score.tolist()
@@ -120,23 +125,20 @@ class API_T2T:
         return keep_score_idx_scores, gen_texts
 
 
-def calculate_f1_squad(
-    a_gold: str,
-    a_pred: str
-) -> float:
+def calculate_f1_squad(a_gold: str, a_pred: str) -> float:
     def normalize_answer(s):
         """Lower text and remove punctuation, articles and extra whitespace."""
 
         def remove_articles(text):
-            regex = re.compile(r'\b(a|an|the)\b', re.UNICODE)
-            return re.sub(regex, ' ', text)
+            regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
+            return re.sub(regex, " ", text)
 
         def white_space_fix(text):
-            return ' '.join(text.split())
+            return " ".join(text.split())
 
         def remove_punc(text):
             exclude = set(string.punctuation)
-            return ''.join(ch for ch in text if ch not in exclude)
+            return "".join(ch for ch in text if ch not in exclude)
 
         def lower(text):
             return text.lower()
@@ -144,7 +146,8 @@ def calculate_f1_squad(
         return white_space_fix(remove_articles(remove_punc(lower(s))))
 
     def get_tokens(s):
-        if not s: return []
+        if not s:
+            return []
         return normalize_answer(s).split()
 
     gold_toks = get_tokens(a_gold)
@@ -168,12 +171,15 @@ def calculate_BERTScore(
     metric_BERTScore,
     device: str,
 ) -> List[float]:
-
     if len(model_predictions) == 0:
         return []
 
-    metric_BERTScore.add_batch(predictions=model_predictions, references=gold_references)
-    final_score = metric_BERTScore.compute(model_type='bert-base-multilingual-cased', device=device)
+    metric_BERTScore.add_batch(
+        predictions=model_predictions, references=gold_references
+    )
+    final_score = metric_BERTScore.compute(
+        model_type="bert-base-multilingual-cased", device=device
+    )
 
     """
     # set all unanswerable scores to 0
@@ -181,35 +187,29 @@ def calculate_BERTScore(
         if pred == "unanswerable":
             final_score['f1'][i] = 0.0
     """
-    return [f1 for f1 in final_score['f1']]
+    return [f1 for f1 in final_score["f1"]]
 
 
-def extract_table_answers(
-    text: str
-) -> List[str]:
-
+def extract_table_answers(text: str) -> List[str]:
     asws = []
 
     asw_toks = []
     is_asw = False
     for tok in text.split():
-
-        if tok == ']':
-            asws.append(' '.join(asw_toks))
+        if tok == "]":
+            asws.append(" ".join(asw_toks))
             is_asw = False
             asw_toks = []
 
         if is_asw:
             asw_toks.append(tok)
 
-        if tok == '[':
+        if tok == "[":
             is_asw = True
     return asws
 
 
-class WrongE2EFormat(
-    Exception
-):
+class WrongE2EFormat(Exception):
     def __init__(self, obj):
         err = """
             It seems you passed an objected weirdly formatted.
@@ -221,10 +221,7 @@ class WrongE2EFormat(
         super().__init__(err.format(obj))
 
 
-def linearize_e2e_input(
-    input: str,
-    format: str ='gem'
-) -> str:
+def linearize_e2e_input(input: str, format: str = "gem") -> str:
     """
     Linearize an E2E input for QuestEval.
     Input must be a string, in standard E2E format.
@@ -232,27 +229,23 @@ def linearize_e2e_input(
         'name[The Eagle], eatType[coffee shop], food[Japanese]'
     lowercase=True indicates that you want all tokens to be lowercased.
     """
-    if format != 'gem':
-        raise ValueError(f'Unsupported format for now: {format}')
+    if format != "gem":
+        raise ValueError(f"Unsupported format for now: {format}")
 
     if not isinstance(input, str):
         raise WrongE2EFormat(input)
 
-    items = dict([s.strip()[:-1].split('[') for s in input.split(',')])
+    items = dict([s.strip()[:-1].split("[") for s in input.split(",")])
 
-    return ' , '.join([
-        f'{key} [ {value} ]'
-        for key, value in items.items()
-    ])
+    return " , ".join([f"{key} [ {value} ]" for key, value in items.items()])
 
 
-class LinearizeWebnlgInput():
-
+class LinearizeWebnlgInput:
     def __init__(
         self,
         spacy_pipeline,
         lowercase=False,
-        format: str ='gem',
+        format: str = "gem",
     ):
         """
         Linearize a WebNLG input for QuestEval.
@@ -269,21 +262,17 @@ class LinearizeWebnlgInput():
         self.format = format
         self.spacy_pipeline = spacy_pipeline
 
-    def __call__(
-        self,
-        input: List[str]
-    )-> str:
-
-        if self.format != 'gem':
-            raise ValueError(f'Unsupported format for now: {self.format}')
+    def __call__(self, input: List[str]) -> str:
+        if self.format != "gem":
+            raise ValueError(f"Unsupported format for now: {self.format}")
 
         if not isinstance(input, list):
             raise WrongWebNlgFormat(input)
 
-        triples = [Triple(triple,
-                          spacy_pipeline=self.spacy_pipeline,
-                          lower=self.lowercase)
-                   for triple in input]
+        triples = [
+            Triple(triple, spacy_pipeline=self.spacy_pipeline, lower=self.lowercase)
+            for triple in input
+        ]
 
         table = dict()
         for triple in triples:
@@ -292,11 +281,11 @@ class LinearizeWebnlgInput():
 
         ret = list()
         for entidx, (entname, entlist) in enumerate(table.items(), 1):
-            ret.append(f'entity [ {entname} ]')
+            ret.append(f"entity [ {entname} ]")
             for values, key in entlist:
-                ret.append(f'{key} [ {values} ]')
+                ret.append(f"{key} [ {values} ]")
 
-        return ' , '.join(ret)
+        return " , ".join(ret)
 
 
 class Triple:
@@ -307,59 +296,58 @@ class Triple:
         lower: bool = False,
     ):
         sbj, prp, obj = self.safe_split(raw_text)
-        obj = ' '.join([t.text for t in spacy_pipeline(self.clean_obj(obj.strip(), lc=lower))])
+        obj = " ".join(
+            [t.text for t in spacy_pipeline(self.clean_obj(obj.strip(), lc=lower))]
+        )
         prp = self.clean_prp(prp.strip())
-        sbj = ' '.join([t.text for t in spacy_pipeline(self.clean_obj(sbj.strip(), lc=lower))])
-        if prp == 'ethnicgroup':
-            obj = obj.split('_in_')[0]
-            obj = obj.split('_of_')[0]
+        sbj = " ".join(
+            [t.text for t in spacy_pipeline(self.clean_obj(sbj.strip(), lc=lower))]
+        )
+        if prp == "ethnicgroup":
+            obj = obj.split("_in_")[0]
+            obj = obj.split("_of_")[0]
 
         self.sbj = sbj
         self.obj = obj
         self.prp = prp
 
     @staticmethod
-    def safe_split(
-        raw_text
-    ) -> List[str]:
-
+    def safe_split(raw_text) -> List[str]:
         if not isinstance(raw_text, str):
-            raise TypeError('A triple must be a string with two "|"'
-                            f'but you gave: {raw_text}')
+            raise TypeError(
+                'A triple must be a string with two "|"' f"but you gave: {raw_text}"
+            )
 
-        split = raw_text.strip().split('|')
+        split = raw_text.strip().split("|")
         if not len(split) == 3:
-            raise TypeError('A triple must be a string with two "|"'
-                            f'but you gave: {raw_text}')
+            raise TypeError(
+                'A triple must be a string with two "|"' f"but you gave: {raw_text}"
+            )
 
         return split
 
     def __repr__(self):
-        return f'{self.sbj} | {self.prp} | {self.obj}'
+        return f"{self.sbj} | {self.prp} | {self.obj}"
 
     @staticmethod
-    def clean_obj(
-        s,
-        lc: bool = False
-    ):
+    def clean_obj(s, lc: bool = False):
         s = unidecode.unidecode(s)
-        if lc: s = s.lower()
+        if lc:
+            s = s.lower()
         s = re.sub('^"|"$', "", s)  # remove useless quotesigns
-        s = re.sub('_', ' ', s)  # turn undescores to spaces
+        s = re.sub("_", " ", s)  # turn undescores to spaces
         return s
 
     @staticmethod
-    def clean_prp(
-        s: str,
-        lc: bool=False
-    ) -> str:
+    def clean_prp(s: str, lc: bool = False) -> str:
         s = unidecode.unidecode(s)
-        if lc: s = s.lower()
+        if lc:
+            s = s.lower()
         s = re.sub('^"|"$', "", s)  # remove useless quotesigns
-        s = re.sub('\s+', '_', s)  # turn spaces to underscores
-        s = re.sub('\s+\(in metres\)', '_m', s)
-        s = re.sub('\s+\(in feet\)', '_f', s)
-        s = re.sub('\(.*\)', '', s)
+        s = re.sub("\s+", "_", s)  # turn spaces to underscores
+        s = re.sub("\s+\(in metres\)", "_m", s)
+        s = re.sub("\s+\(in feet\)", "_f", s)
+        s = re.sub("\(.*\)", "", s)
         return s.strip()
 
 
