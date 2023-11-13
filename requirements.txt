@@ -1,12 +1,6 @@
 pytest==6.2.4
-<<<<<<< Updated upstream
 transformers==4.27.4
-sentencepiece==0.1.97
 bert_score==0.3.13
-=======
-transformers
 sentencepiece>=0.1.96
-bert_score
->>>>>>> Stashed changes
 Unidecode==1.2.0
 spacy==3.5.1
