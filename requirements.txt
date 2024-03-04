@@ -1,5 +1,5 @@
 pytest==6.2.4
-transformers==4.27.4
+transformers
 bert_score==0.3.13
 sentencepiece>=0.1.96
 Unidecode==1.2.0
