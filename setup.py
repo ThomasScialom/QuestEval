@@ -1,14 +1,14 @@
 from setuptools import setup, find_packages
 
-PACKAGE_NAME = 'questeval'
-VERSION = "0.2.4"
+PACKAGE_NAME = "questeval"
+VERSION = "0.2.5"
 DESCRIPTION = "State-of-the-art metric for Natural Language Generation"
 KEYWORDS = "NLP NLG Metric Evaluation Summarization Simplification Image Captioning Data2text Question Answering Generation Multilingual deep learning Transformer Pytorch"
-URL = 'https://github.com/ThomasScialom/QuestEval'
-EMAIL = 't.scialom@gmail.com'
-AUTHOR = 'Thomas Scialom, Paul-Alexis Dray'
-LICENSE = 'MIT'
-REQUIRES_PYTHON = '>=3.6.0'
+URL = "https://github.com/ThomasScialom/QuestEval"
+EMAIL = "t.scialom@gmail.com"
+AUTHOR = "Thomas Scialom, Paul-Alexis Dray"
+LICENSE = "MIT"
+REQUIRES_PYTHON = ">=3.6.0"
 EXTRAS = {}
 
 with open("README.md", "r", encoding="utf-8") as f:
@@ -22,7 +22,7 @@ setup(
     version=VERSION,
     description=DESCRIPTION,
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     keywords=KEYWORDS,
     license=LICENSE,
     author=AUTHOR,
@@ -40,10 +40,11 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
 )
